@@ -1,10 +1,10 @@
 import * as Sentry from "@sentry/bun";
-import { Bot, Context } from "grammy";
+import { bot } from "../config/bot";
 
 /**
  * Registers the global error handler for the bot
  */
-export function registerErrorHandler(bot: Bot<Context>, sentryEnabled: boolean): void {
+export function registerErrorHandler(sentryEnabled: boolean): void {
     bot.catch((err) => {
         const ctx = err.ctx;
         console.error(`Error while handling update ${ctx.update.update_id}:`);

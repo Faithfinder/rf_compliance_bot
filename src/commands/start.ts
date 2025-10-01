@@ -1,9 +1,9 @@
-import { Bot, Context } from "grammy";
+import { bot } from "../config/bot";
 
 /**
  * Registers the /start command handler
  */
-export function registerStartCommand(bot: Bot<Context>): void {
+export function registerStartCommand(): void {
     bot.command("start", (ctx) => {
         const welcomeMessage = `
 Welcome to the RF Compliance Bot! 👋

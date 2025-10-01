@@ -1,9 +1,9 @@
-import { Bot, Context } from "grammy";
+import { bot } from "../config/bot";
 
 /**
  * Registers the /help command handler
  */
-export function registerHelpCommand(bot: Bot<Context>): void {
+export function registerHelpCommand(): void {
     bot.command("help", (ctx) => {
         const helpMessage = `
 Available commands:

@@ -1,4 +1,4 @@
-import { createBot } from "./config/bot";
+import { bot } from "./config/bot";
 import { initializeSentry, closeSentry } from "./config/sentry";
 import { registerStartCommand } from "./commands/start";
 import { registerHelpCommand } from "./commands/help";
@@ -9,21 +9,12 @@ import { registerErrorHandler } from "./handlers/error";
 // Initialize Sentry
 const sentryEnabled = initializeSentry();
 
-// Create bot instance
-let bot;
-try {
-    bot = createBot();
-} catch (error) {
-    console.error(`Error: ${error instanceof Error ? error.message : "Failed to create bot"}`);
-    process.exit(1);
-}
-
 // Register all commands and handlers
-registerStartCommand(bot);
-registerHelpCommand(bot);
-registerChannelCommands(bot);
-registerMessageHandler(bot, sentryEnabled);
-registerErrorHandler(bot, sentryEnabled);
+registerStartCommand();
+registerHelpCommand();
+registerChannelCommands();
+registerMessageHandler(sentryEnabled);
+registerErrorHandler(sentryEnabled);
 
 // Graceful shutdown
 const gracefulShutdown = async (signal: string) => {

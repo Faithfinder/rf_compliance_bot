@@ -1,12 +1,12 @@
 import * as Sentry from "@sentry/bun";
-import { Bot, Context } from "grammy";
+import { bot } from "../config/bot";
 import { getUserChannel } from "../storage";
 import { formatChannelInfo } from "../utils";
 
 /**
  * Registers the message handler for forwarding messages to configured channels
  */
-export function registerMessageHandler(bot: Bot<Context>, sentryEnabled: boolean): void {
+export function registerMessageHandler(sentryEnabled: boolean): void {
     bot.on("message", async (ctx) => {
         const userId = ctx.from?.id;
 

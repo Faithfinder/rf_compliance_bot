@@ -1,11 +1,11 @@
-import { Bot, Context } from "grammy";
+import { bot } from "../config/bot";
 import { getUserChannel, setUserChannel, removeUserChannel } from "../storage";
 import { resolveChannel, formatChannelInfo } from "../utils";
 
 /**
  * Registers all channel-related command handlers
  */
-export function registerChannelCommands(bot: Bot<Context>): void {
+export function registerChannelCommands(): void {
     // /setchannel command - Configure channel for user
     bot.command("setchannel", async (ctx) => {
         const userId = ctx.from?.id;
