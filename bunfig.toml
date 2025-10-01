@@ -1,0 +1,11 @@
+[test]
+# Preload test setup file if needed
+# preload = ["./tests/setup.ts"]
+
+# Coverage settings
+coverage = true
+coverageDir = "./coverage"
+coverageReporter = ["text", "lcov"]
+
+# Test pattern
+testMatch = ["**/*.test.ts", "**/*.spec.ts"]
