@@ -50,6 +50,8 @@ The bot uses a modular architecture with separate concerns:
 ### Key Patterns
 
 - **Singleton bot instance**: [src/config/bot.ts](src/config/bot.ts) exports a single `bot` instance with session context type used throughout the app
+  - **IMPORTANT**: The bot instance should NEVER be passed as a parameter to functions. Always import it directly from `src/config/bot.ts` where needed.
+  - Access the bot API via `bot.api` when needed (e.g., `bot.api.getChat()`, `bot.api.sendMessage()`)
 - **Session middleware**: Uses grammY's session plugin with FileAdapter for persistent storage in `data/sessions.json`
 - **Registration functions**: All commands and handlers are registered via `register*()` functions called from [src/index.ts](src/index.ts)
 - **Error handling**: Global error handler in [src/handlers/error.ts](src/handlers/error.ts) captures all bot errors and reports to Sentry with context

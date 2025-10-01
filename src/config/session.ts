@@ -15,6 +15,7 @@ export interface ChannelConfig {
  */
 export interface SessionData {
     channelConfig?: ChannelConfig;
+    awaitingChannelSelection?: boolean;
 }
 
 /**

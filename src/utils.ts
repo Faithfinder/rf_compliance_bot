@@ -1,4 +1,4 @@
-import { Api } from "grammy";
+import { bot } from "./config/bot";
 
 interface ChannelInfo {
     id: string;
@@ -7,11 +7,10 @@ interface ChannelInfo {
 
 /**
  * Resolves a channel identifier (handle or ID) to a validated channel info
- * @param bot The bot API instance
  * @param identifier Channel handle (e.g., @channelname) or numeric ID (e.g., -1001234567890)
  * @returns Channel info if valid and bot has access, null otherwise
  */
-export async function resolveChannel(bot: Api, identifier: string): Promise<ChannelInfo | null> {
+export async function resolveChannel(identifier: string): Promise<ChannelInfo | null> {
     try {
         // Trim whitespace
         const trimmed = identifier.trim();
@@ -30,7 +29,7 @@ export async function resolveChannel(bot: Api, identifier: string): Promise<Chan
         }
 
         // Try to get the chat info
-        const chat = await bot.getChat(trimmed);
+        const chat = await bot.api.getChat(trimmed);
 
         // Verify it's a channel or supergroup
         if (chat.type !== "channel" && chat.type !== "supergroup") {
