@@ -45,20 +45,41 @@ export function registerChannelCommands(): void {
         await ctx.api.editMessageText(ctx.chat.id, workingMsg.message_id, "Checking bot permissions...");
 
         try {
-            // Try to send a test message to verify write permissions
-            const testMsg = await ctx.api.sendMessage(channelInfo.id, "🤖 Testing bot permissions...");
-            // If successful, delete the test message
-            await ctx.api.deleteMessage(channelInfo.id, testMsg.message_id);
+            // Get bot's status in the channel to verify permissions
+            const botMember = await ctx.api.getChatMember(channelInfo.id, ctx.me.id);
+
+            // Check if bot is an administrator with post_messages permission
+            if (botMember.status !== "administrator" && botMember.status !== "creator") {
+                return ctx.api.editMessageText(
+                    ctx.chat.id,
+                    workingMsg.message_id,
+                    "❌ Bot does not have permission to post to this channel.\n\n" +
+                        "Please make sure the bot:\n" +
+                        "1. Has been added to the channel\n" +
+                        "2. Is an administrator with permission to post messages\n" +
+                        "3. Is not restricted by the channel's settings",
+                );
+            }
+
+            // For administrators, check if they have post_messages permission (if it's set)
+            if (botMember.status === "administrator" && botMember.can_post_messages !== true) {
+                return ctx.api.editMessageText(
+                    ctx.chat.id,
+                    workingMsg.message_id,
+                    "❌ Bot is an administrator but doesn't have permission to post messages.\n\n" +
+                        "Please grant the bot 'Post Messages' permission in the channel settings.",
+                );
+            }
         } catch (error) {
             console.error("Permission check failed:", error);
             return ctx.api.editMessageText(
                 ctx.chat.id,
                 workingMsg.message_id,
-                "❌ Bot does not have permission to post to this channel.\n\n" +
+                "❌ Unable to check bot permissions for this channel.\n\n" +
                     "Please make sure the bot:\n" +
                     "1. Has been added to the channel\n" +
-                    "2. Has permission to post messages\n" +
-                    "3. Is not restricted by the channel's settings",
+                    "2. Is an administrator with permission to post messages\n" +
+                    "3. The channel exists and is accessible",
             );
         }
 
