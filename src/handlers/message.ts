@@ -1,6 +1,5 @@
 import * as Sentry from "@sentry/bun";
 import { bot } from "../config/bot";
-import { getUserChannel } from "../storage";
 import { formatChannelInfo } from "../utils";
 
 /**
@@ -15,7 +14,7 @@ export function registerMessageHandler(): void {
         }
 
         // Get the user's channel configuration
-        const channelConfig = await getUserChannel(userId);
+        const channelConfig = ctx.session.channelConfig;
 
         if (!channelConfig) {
             return ctx.reply(

@@ -38,19 +38,19 @@ bun run format:check         # Check formatting without modifying
 
 The bot uses a modular architecture with separate concerns:
 
-- **Entry point**: [src/index.ts](src/index.ts) - initializes Sentry, registers all commands/handlers, and starts the bot with graceful shutdown handling
-- **Configuration**: [src/config/](src/config/) - bot instance (`bot.ts`) and Sentry initialization (`sentry.ts`)
+- **Entry point**: [src/index.ts](src/index.ts) - initializes Sentry, installs session middleware, registers all commands/handlers, and starts the bot with graceful shutdown handling
+- **Configuration**: [src/config/](src/config/) - bot instance (`bot.ts`), session configuration (`session.ts`), and Sentry initialization (`sentry.ts`)
 - **Commands**: [src/commands/](src/commands/) - command handlers registered via functions
   - `start.ts` - Welcome message
   - `help.ts` - Help command
   - `channel.ts` - Channel management (`/setchannel`, `/channelstatus`, `/removechannel`)
 - **Handlers**: [src/handlers/](src/handlers/) - generic message handling and error handling
-- **Storage**: [src/storage.ts](src/storage.ts) - JSON-based persistent storage for user-channel mappings in `data/user-channels.json`
 - **Utilities**: [src/utils.ts](src/utils.ts) - channel resolution and formatting utilities
 
 ### Key Patterns
 
-- **Singleton bot instance**: [src/config/bot.ts](src/config/bot.ts) exports a single `bot` instance used throughout the app
+- **Singleton bot instance**: [src/config/bot.ts](src/config/bot.ts) exports a single `bot` instance with session context type used throughout the app
+- **Session middleware**: Uses grammY's session plugin with FileAdapter for persistent storage in `data/sessions.json`
 - **Registration functions**: All commands and handlers are registered via `register*()` functions called from [src/index.ts](src/index.ts)
 - **Error handling**: Global error handler in [src/handlers/error.ts](src/handlers/error.ts) captures all bot errors and reports to Sentry with context
 - **Graceful shutdown**: SIGINT/SIGTERM handlers ensure the bot stops cleanly and flushes Sentry events
@@ -64,19 +64,21 @@ The bot uses a modular architecture with separate concerns:
 
 ### Storage System
 
-The bot uses a simple JSON-based storage system ([src/storage.ts](src/storage.ts)) that:
-- Stores user-channel mappings in `data/user-channels.json`
-- Creates the `data/` directory automatically if it doesn't exist
-- Provides async functions: `getUserChannel()`, `setUserChannel()`, `removeUserChannel()`
-- Stores channel ID and optional channel title per user
+The bot uses grammY's session plugin with FileAdapter ([src/config/session.ts](src/config/session.ts)) for persistent storage:
+- Stores user session data (including channel configurations) in `data/sessions.json`
+- Session data is accessed via `ctx.session` in all handlers
+- Session structure defined in [src/config/session.ts](src/config/session.ts):
+  - `channelConfig?: { channelId: string; channelTitle?: string }` - User's configured channel
+- Sessions are automatically persisted after each update
+- Type-safe access through TypeScript `SessionContext` type
 
 ### Testing
 
 - Uses Bun's built-in test runner (`bun:test`)
 - Test files: `**/*.test.ts` or `**/*.spec.ts` patterns
 - Coverage configured in [bunfig.toml](bunfig.toml) to output text and lcov formats
-- Current tests in [tests/bot.test.ts](tests/bot.test.ts) cover storage operations and utility functions
-- Tests clean up `data/user-channels.json` before/after each run
+- Current tests in [tests/bot.test.ts](tests/bot.test.ts) cover utility functions
+- Session-based storage is handled by grammY's middleware; integration tests would be needed for full session testing
 
 ## Code Style
 
@@ -91,6 +93,7 @@ The bot uses a simple JSON-based storage system ([src/storage.ts](src/storage.ts
 ## Development Notes
 
 - When adding new commands, create a `register*Command()` function in [src/commands/](src/commands/) and call it from [src/index.ts](src/index.ts)
+- Session data is accessed via `ctx.session` in all command and message handlers
 - The channel resolution logic ([src/utils.ts](src/utils.ts) `resolveChannel()`) validates channel access and type (channel/supergroup only)
 - Permission checking for channels happens in [src/commands/channel.ts](src/commands/channel.ts) via `getChatMember()` to verify bot has posting permissions
 - All bot errors are automatically captured by Sentry with Telegram context (update_id, user_id, chat_id, message_text)

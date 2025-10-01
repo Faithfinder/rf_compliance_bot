@@ -1,4 +1,5 @@
 import { Bot } from "grammy";
+import type { SessionContext } from "./session";
 
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 
@@ -7,6 +8,6 @@ if (!BOT_TOKEN) {
 }
 
 /**
- * Singleton bot instance
+ * Singleton bot instance with session support
  */
-export const bot = new Bot(BOT_TOKEN);
+export const bot = new Bot<SessionContext>(BOT_TOKEN);

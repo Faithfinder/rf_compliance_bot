@@ -1,5 +1,6 @@
 import { bot } from "./config/bot";
 import { initializeSentry, closeSentry } from "./config/sentry";
+import { createSessionMiddleware } from "./config/session";
 import { registerStartCommand } from "./commands/start";
 import { registerHelpCommand } from "./commands/help";
 import { registerChannelCommands } from "./commands/channel";
@@ -8,6 +9,9 @@ import { registerErrorHandler } from "./handlers/error";
 
 // Initialize Sentry
 initializeSentry();
+
+// Install session middleware
+bot.use(createSessionMiddleware());
 
 // Register all commands and handlers
 registerStartCommand();

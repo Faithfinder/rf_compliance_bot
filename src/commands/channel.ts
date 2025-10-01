@@ -1,5 +1,4 @@
 import { bot } from "../config/bot";
-import { getUserChannel, setUserChannel, removeUserChannel } from "../storage";
 import { resolveChannel, formatChannelInfo } from "../utils";
 
 /**
@@ -84,7 +83,10 @@ export function registerChannelCommands(): void {
         }
 
         // Save the channel configuration
-        await setUserChannel(userId, channelInfo.id, channelInfo.title);
+        ctx.session.channelConfig = {
+            channelId: channelInfo.id,
+            channelTitle: channelInfo.title,
+        };
 
         return ctx.api.editMessageText(
             ctx.chat.id,
@@ -103,7 +105,7 @@ export function registerChannelCommands(): void {
             return ctx.reply("Unable to identify user.");
         }
 
-        const channelConfig = await getUserChannel(userId);
+        const channelConfig = ctx.session.channelConfig;
 
         if (!channelConfig) {
             return ctx.reply(
@@ -129,11 +131,11 @@ export function registerChannelCommands(): void {
             return ctx.reply("Unable to identify user.");
         }
 
-        const removed = await removeUserChannel(userId);
-
-        if (!removed) {
+        if (!ctx.session.channelConfig) {
             return ctx.reply("You do not have a channel configured.");
         }
+
+        delete ctx.session.channelConfig;
 
         return ctx.reply(
             "✅ Channel configuration removed successfully.\n\nYour messages will no longer be posted to any channel.",
