@@ -8,13 +8,9 @@ import { registerChannelCommands } from "./commands/channel";
 import { registerMessageHandler } from "./handlers/message";
 import { registerErrorHandler } from "./handlers/error";
 
-// Initialize Sentry
 initializeSentry();
-
-// Install session middleware
 bot.use(createSessionMiddleware());
 
-// Register all commands and handlers
 registerStartCommand();
 registerHelpCommand();
 registerInfoCommand();
@@ -22,13 +18,10 @@ registerChannelCommands();
 registerMessageHandler();
 registerErrorHandler();
 
-// Graceful shutdown
 const gracefulShutdown = async (signal: string) => {
     console.warn(`\nReceived ${signal}, shutting down gracefully...`);
     await bot.stop();
     console.warn("Bot stopped.");
-
-    // Flush Sentry events before exit
     await closeSentry();
 
     process.exit(0);
@@ -37,7 +30,6 @@ const gracefulShutdown = async (signal: string) => {
 process.once("SIGINT", () => gracefulShutdown("SIGINT"));
 process.once("SIGTERM", () => gracefulShutdown("SIGTERM"));
 
-// Start the bot
 console.warn("Starting bot...");
 bot.start({
     onStart: (botInfo) => {

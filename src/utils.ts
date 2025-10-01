@@ -12,15 +12,12 @@ interface ChannelInfo {
  */
 export async function resolveChannel(identifier: string): Promise<ChannelInfo | null> {
     try {
-        // Trim whitespace
         const trimmed = identifier.trim();
 
-        // Validate format
         if (!trimmed) {
             return null;
         }
 
-        // Check if it's a handle (starts with @) or numeric ID
         const isHandle = trimmed.startsWith("@");
         const isNumericId = /^-?\d+$/.test(trimmed);
 
@@ -28,10 +25,8 @@ export async function resolveChannel(identifier: string): Promise<ChannelInfo | 
             return null;
         }
 
-        // Try to get the chat info
         const chat = await bot.api.getChat(trimmed);
 
-        // Verify it's a channel or supergroup
         if (chat.type !== "channel" && chat.type !== "supergroup") {
             return null;
         }

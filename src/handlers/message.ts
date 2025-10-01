@@ -2,9 +2,6 @@ import * as Sentry from "@sentry/bun";
 import { bot } from "../config/bot";
 import { formatChannelInfo } from "../utils";
 
-/**
- * Registers the message handler for forwarding messages to configured channels
- */
 export function registerMessageHandler(): void {
     bot.on("message", async (ctx) => {
         const userId = ctx.from?.id;
@@ -13,7 +10,6 @@ export function registerMessageHandler(): void {
             return ctx.reply("Unable to identify user.");
         }
 
-        // Get the user's channel configuration
         const channelConfig = ctx.session.channelConfig;
 
         if (!channelConfig) {
@@ -24,18 +20,15 @@ export function registerMessageHandler(): void {
             );
         }
 
-        // Try to copy the message to the configured channel
         try {
             await ctx.api.copyMessage(channelConfig.channelId, ctx.chat.id, ctx.message.message_id);
 
-            // Confirm to the user
             return ctx.reply(
                 `✅ Message posted to ${formatChannelInfo(channelConfig.channelId, channelConfig.channelTitle)}`,
             );
         } catch (error) {
             console.error("Error posting to channel:", error);
 
-            // Send error to Sentry
             Sentry.withScope((scope) => {
                 scope.setContext("channel_post", {
                     user_id: userId,

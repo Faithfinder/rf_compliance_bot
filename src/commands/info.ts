@@ -1,9 +1,6 @@
 import { bot } from "../config/bot";
 import { formatChannelInfo } from "../utils";
 
-/**
- * Registers the /info command handler
- */
 export function registerInfoCommand(): void {
     bot.command("info", async (ctx) => {
         const userId = ctx.from?.id;

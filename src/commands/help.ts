@@ -1,8 +1,5 @@
 import { bot } from "../config/bot";
 
-/**
- * Registers the /help command handler
- */
 export function registerHelpCommand(): void {
     bot.command("help", (ctx) => {
         const helpMessage = `

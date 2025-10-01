@@ -7,7 +7,4 @@ if (!BOT_TOKEN) {
     throw new Error("TELEGRAM_BOT_TOKEN is not set in environment variables");
 }
 
-/**
- * Singleton bot instance with session support
- */
 export const bot = new Bot<SessionContext>(BOT_TOKEN);

@@ -1,16 +1,12 @@
 import * as Sentry from "@sentry/bun";
 import { bot } from "../config/bot";
 
-/**
- * Registers the global error handler for the bot
- */
 export function registerErrorHandler(): void {
     bot.catch((err) => {
         const ctx = err.ctx;
         console.error(`Error while handling update ${ctx.update.update_id}:`);
         console.error("Error:", err.error);
 
-        // Send error to Sentry with context
         Sentry.withScope((scope) => {
             scope.setContext("telegram_update", {
                 update_id: ctx.update.update_id,

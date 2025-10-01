@@ -67,6 +67,7 @@ The bot uses a modular architecture with separate concerns:
 ### Storage System
 
 The bot uses grammY's session plugin with FileAdapter ([src/config/session.ts](src/config/session.ts)) for persistent storage:
+
 - Stores user session data (including channel configurations) in `data/sessions.json`
 - Session data is accessed via `ctx.session` in all handlers
 - Session structure defined in [src/config/session.ts](src/config/session.ts):
@@ -91,6 +92,18 @@ The bot uses grammY's session plugin with FileAdapter ([src/config/session.ts](s
   - `any` types trigger warnings
   - console.warn and console.error are allowed
 - **Formatting**: Prettier for consistent code style
+- **Comments**:
+  - DO NOT add self-explanatory comments that merely restate what the code does
+  - Only add comments for complex logic, non-obvious behavior, or important context
+  - Examples of comments to avoid:
+    - `// Initialize Sentry` above `initializeSentry();`
+    - `// Get user ID` above `const userId = ctx.from?.id;`
+    - `// Return the result` above a return statement
+  - Examples of useful comments:
+    - Implementation quirks or workarounds
+    - Business logic that's not obvious from code
+    - Complex algorithms or non-trivial operations
+    - Important security or performance considerations
 
 ## Development Notes
 
