@@ -1,6 +1,11 @@
 import * as Sentry from "@sentry/bun";
+import { Keyboard } from "grammy";
 import { bot } from "../config/bot";
-import { formatChannelInfo } from "../utils";
+import {
+    formatChannelInfo,
+    checkChannelRequirements,
+    formatChannelRequirements,
+} from "../utils";
 
 export function registerMessageHandler(): void {
     bot.on("message", async (ctx) => {
@@ -39,13 +44,37 @@ export function registerMessageHandler(): void {
                 Sentry.captureException(error);
             });
 
-            return ctx.reply(
-                "❌ Failed to post message to channel. Please make sure:\n" +
-                    "1. The bot is still in the channel\n" +
-                    "2. The bot has posting permissions\n" +
-                    "3. The channel still exists\n\n" +
-                    "You can try reconfiguring with /setchannel or remove the configuration with /removechannel",
-            );
+            const requirements = await checkChannelRequirements(channelConfig.channelId);
+
+            let errorMessage = `❌ Failed to post message to ${formatChannelInfo(channelConfig.channelId, channelConfig.channelTitle)}\n\n`;
+            errorMessage += `📋 Requirements:\n${formatChannelRequirements(requirements)}\n\n`;
+
+            if (!requirements.channelExists) {
+                errorMessage +=
+                    "**Next step:** The channel no longer exists or the bot cannot access it. Please select a different channel.";
+
+                const keyboard = new Keyboard()
+                    .requestChat("Select Another Channel", 1, {
+                        chat_is_channel: true,
+                        bot_is_member: true,
+                    })
+                    .text("/removechannel")
+                    .resized()
+                    .oneTime();
+
+                ctx.session.awaitingChannelSelection = true;
+                return ctx.reply(errorMessage, { reply_markup: keyboard });
+            } else if (!requirements.botIsAdded) {
+                errorMessage +=
+                    "**Next step:** Ask your channel administrator to add this bot as an administrator to the channel.";
+            } else if (!requirements.botCanPost) {
+                errorMessage +=
+                    '**Next step:** Ask your channel administrator to grant the bot "Post Messages" permission.';
+            }
+
+            errorMessage += "\n\nAlternatively, use /setchannel to configure a different channel";
+
+            return ctx.reply(errorMessage);
         }
     });
 }
