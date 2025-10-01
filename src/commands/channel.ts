@@ -23,38 +23,15 @@ export function showChannelSelectionUI(errorMessage?: string): { text: string; k
 
 async function processChannelSelection(ctx: SessionContext, channelIdentifier: string): Promise<void> {
     const chatId = ctx.chat!.id;
-    let errorMessage: string | undefined;
+    const warnings: string[] = [];
 
     const workingMsg = await ctx.reply("Resolving channel...");
     const channelInfo = await resolveChannel(channelIdentifier);
 
     if (!channelInfo) {
-        errorMessage =
+        await bot.api.deleteMessage(chatId, workingMsg.message_id).catch(() => {});
+        const errorMessage =
             "Unable to find or access that channel. Make sure the bot has been added to the channel as an administrator.";
-    } else {
-        await bot.api.editMessageText(chatId, workingMsg.message_id, "Checking bot permissions...");
-
-        try {
-            const botInfo = await bot.api.getMe();
-            const botMember = await bot.api.getChatMember(channelInfo.id, botInfo.id);
-
-            if (botMember.status !== "administrator" && botMember.status !== "creator") {
-                errorMessage =
-                    "Bot does not have permission to post to this channel. Make sure the bot is an administrator with permission to post messages.";
-            } else if (botMember.status === "administrator" && botMember.can_post_messages !== true) {
-                errorMessage =
-                    "Bot is an administrator but doesn't have permission to post messages. Please grant the 'Post Messages' permission.";
-            }
-        } catch (error) {
-            console.error("Permission check failed:", error);
-            errorMessage =
-                "Unable to check bot permissions for this channel. Make sure the bot has been added to the channel as an administrator.";
-        }
-    }
-
-    await bot.api.deleteMessage(chatId, workingMsg.message_id).catch(() => {});
-
-    if (errorMessage) {
         const { text, keyboard } = showChannelSelectionUI(errorMessage);
         ctx.session.awaitingChannelSelection = true;
         await ctx.reply(text, { reply_markup: keyboard });
@@ -62,16 +39,45 @@ async function processChannelSelection(ctx: SessionContext, channelIdentifier: s
     }
 
     ctx.session.channelConfig = {
-        channelId: channelInfo!.id,
-        channelTitle: channelInfo!.title,
+        channelId: channelInfo.id,
+        channelTitle: channelInfo.title,
     };
 
-    await ctx.reply(
-        `✅ Channel configured successfully!\n\n` +
-            `Your messages will now be posted to: ${formatChannelInfo(channelInfo!.id, channelInfo!.title)}\n\n` +
-            `Send me any message to test it out.`,
-        { reply_markup: { remove_keyboard: true } },
-    );
+    await bot.api.editMessageText(chatId, workingMsg.message_id, "Checking bot permissions...");
+
+    try {
+        const botInfo = await bot.api.getMe();
+        const botMember = await bot.api.getChatMember(channelInfo.id, botInfo.id);
+
+        if (botMember.status !== "administrator" && botMember.status !== "creator") {
+            warnings.push(
+                "Bot does not have permission to post to this channel. Make sure the bot is an administrator with permission to post messages.",
+            );
+        } else if (botMember.status === "administrator" && botMember.can_post_messages !== true) {
+            warnings.push(
+                "Bot is an administrator but doesn't have permission to post messages. Please grant the 'Post Messages' permission.",
+            );
+        }
+    } catch (error) {
+        console.error("Permission check failed:", error);
+        warnings.push(
+            "Unable to check bot permissions for this channel. Make sure the bot has been added to the channel as an administrator.",
+        );
+    }
+
+    await bot.api.deleteMessage(chatId, workingMsg.message_id).catch(() => {});
+
+    let responseText =
+        `✅ Channel configured!\n\n` +
+        `Your messages will now be posted to: ${formatChannelInfo(channelInfo.id, channelInfo.title)}`;
+
+    if (warnings.length > 0) {
+        responseText += `\n\n⚠️ Warnings:\n${warnings.map((w) => `• ${w}`).join("\n")}`;
+    } else {
+        responseText += `\n\nSend me any message to test it out.`;
+    }
+
+    await ctx.reply(responseText, { reply_markup: { remove_keyboard: true } });
 }
 
 export function registerChannelCommands(): void {
