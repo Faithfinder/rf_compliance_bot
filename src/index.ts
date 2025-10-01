@@ -1,4 +1,18 @@
+import * as Sentry from '@sentry/bun';
 import { Bot } from 'grammy';
+
+// Initialize Sentry
+const SENTRY_DSN = process.env.SENTRY_DSN;
+if (SENTRY_DSN) {
+  Sentry.init({
+    dsn: SENTRY_DSN,
+    environment: process.env.NODE_ENV || 'development',
+    tracesSampleRate: 1.0, // Adjust for production (e.g., 0.1 for 10% sampling)
+  });
+  console.warn('Sentry initialized');
+} else {
+  console.warn('Sentry DSN not provided, error tracking disabled');
+}
 
 // Load environment variables
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
@@ -47,6 +61,21 @@ bot.catch((err) => {
   const ctx = err.ctx;
   console.error(`Error while handling update ${ctx.update.update_id}:`);
   console.error('Error:', err.error);
+
+  // Send error to Sentry with context
+  if (SENTRY_DSN) {
+    Sentry.withScope((scope) => {
+      scope.setContext('telegram_update', {
+        update_id: ctx.update.update_id,
+        user_id: ctx.from?.id,
+        username: ctx.from?.username,
+        chat_id: ctx.chat?.id,
+        message_text: ctx.message?.text,
+      });
+      scope.setTag('bot', 'telegram');
+      Sentry.captureException(err.error);
+    });
+  }
 });
 
 // Graceful shutdown
@@ -54,6 +83,13 @@ const gracefulShutdown = async (signal: string) => {
   console.warn(`\nReceived ${signal}, shutting down gracefully...`);
   await bot.stop();
   console.warn('Bot stopped.');
+
+  // Flush Sentry events before exit
+  if (SENTRY_DSN) {
+    console.warn('Flushing Sentry events...');
+    await Sentry.close(2000); // 2 second timeout
+  }
+
   process.exit(0);
 };
 

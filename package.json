@@ -26,6 +26,7 @@
     "typescript": "^5"
   },
   "dependencies": {
+    "@sentry/bun": "^10.17.0",
     "grammy": "^1.38.2"
   }
 }
