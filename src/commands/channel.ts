@@ -9,7 +9,8 @@ export function showChannelSelectionUI(errorMessage?: string): { text: string; k
             chat_is_channel: true,
             bot_is_member: true,
         })
-        .resized();
+        .resized()
+        .oneTime();
 
     let text =
         "Please select a channel from the button below, or use:\n/setchannel <@channel or ID>\n\nExample: /setchannel @mychannel";
@@ -73,11 +74,22 @@ async function processChannelSelection(ctx: SessionContext, channelIdentifier: s
 
     if (warnings.length > 0) {
         responseText += `\n\n⚠️ Warnings:\n${warnings.map((w) => `• ${w}`).join("\n")}`;
+
+        const keyboard = new Keyboard()
+            .requestChat("Select Another Channel", 2, {
+                chat_is_channel: true,
+                bot_is_member: true,
+            })
+            .text("/removechannel")
+            .resized()
+            .oneTime();
+
+        ctx.session.awaitingChannelSelection = true;
+        await ctx.reply(responseText, { reply_markup: keyboard });
     } else {
         responseText += `\n\nSend me any message to test it out.`;
+        await ctx.reply(responseText, { reply_markup: { remove_keyboard: true } });
     }
-
-    await ctx.reply(responseText, { reply_markup: { remove_keyboard: true } });
 }
 
 export function registerChannelCommands(): void {
@@ -131,7 +143,7 @@ export function registerChannelCommands(): void {
         ctx.session.awaitingChannelSelection = false;
         const chatShared = ctx.message.chat_shared;
 
-        if (chatShared.request_id !== 1) {
+        if (chatShared.request_id !== 1 && chatShared.request_id !== 2) {
             return;
         }
 
