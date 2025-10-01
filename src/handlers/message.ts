@@ -6,7 +6,7 @@ import { formatChannelInfo } from "../utils";
 /**
  * Registers the message handler for forwarding messages to configured channels
  */
-export function registerMessageHandler(sentryEnabled: boolean): void {
+export function registerMessageHandler(): void {
     bot.on("message", async (ctx) => {
         const userId = ctx.from?.id;
 
@@ -37,17 +37,15 @@ export function registerMessageHandler(sentryEnabled: boolean): void {
             console.error("Error posting to channel:", error);
 
             // Send error to Sentry
-            if (sentryEnabled) {
-                Sentry.withScope((scope) => {
-                    scope.setContext("channel_post", {
-                        user_id: userId,
-                        channel_id: channelConfig.channelId,
-                        channel_title: channelConfig.channelTitle,
-                    });
-                    scope.setTag("error_type", "channel_post_failed");
-                    Sentry.captureException(error);
+            Sentry.withScope((scope) => {
+                scope.setContext("channel_post", {
+                    user_id: userId,
+                    channel_id: channelConfig.channelId,
+                    channel_title: channelConfig.channelTitle,
                 });
-            }
+                scope.setTag("error_type", "channel_post_failed");
+                Sentry.captureException(error);
+            });
 
             return ctx.reply(
                 "❌ Failed to post message to channel. Please make sure:\n" +

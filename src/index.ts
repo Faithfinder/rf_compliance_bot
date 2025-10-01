@@ -7,14 +7,14 @@ import { registerMessageHandler } from "./handlers/message";
 import { registerErrorHandler } from "./handlers/error";
 
 // Initialize Sentry
-const sentryEnabled = initializeSentry();
+initializeSentry();
 
 // Register all commands and handlers
 registerStartCommand();
 registerHelpCommand();
 registerChannelCommands();
-registerMessageHandler(sentryEnabled);
-registerErrorHandler(sentryEnabled);
+registerMessageHandler();
+registerErrorHandler();
 
 // Graceful shutdown
 const gracefulShutdown = async (signal: string) => {
@@ -23,9 +23,7 @@ const gracefulShutdown = async (signal: string) => {
     console.warn("Bot stopped.");
 
     // Flush Sentry events before exit
-    if (sentryEnabled) {
-        await closeSentry();
-    }
+    await closeSentry();
 
     process.exit(0);
 };
