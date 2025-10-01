@@ -49,7 +49,7 @@ export async function resolveChannel(identifier: string): Promise<ChannelInfo | 
  */
 export function formatChannelInfo(channelId: string, channelTitle?: string): string {
     if (channelTitle) {
-        return `${channelTitle} (${channelId})`;
+        return `${channelTitle} (\`${channelId}\`)`;
     }
     return channelId;
 }
@@ -105,15 +105,11 @@ export async function checkChannelRequirements(channelId: string): Promise<Chann
  */
 export function formatChannelRequirements(requirements: ChannelRequirements): string {
     const lines = [
-        requirements.channelExists
-            ? "✅ Configured channel exists"
-            : "❌ Channel doesn't exist or bot cannot access it",
-        requirements.botIsAdded
-            ? "✅ Bot is added to the channel"
-            : "❌ Bot is not added as an administrator",
-        requirements.botCanPost
-            ? "✅ Bot can post to the channel"
-            : "❌ Bot lacks permission to post messages",
+        requirements.channelExists ? "✅ Configured channel exists" : (
+            "❌ Channel doesn't exist or bot cannot access it"
+        ),
+        requirements.botIsAdded ? "✅ 🤖 Bot is added to the channel" : "❌ 🤖 Bot is not added to the channel",
+        requirements.botCanPost ? "✅ 🤖 Bot can post to the channel" : "❌ 🤖 Bot lacks permission to post messages",
     ];
 
     return lines.join("\n");
