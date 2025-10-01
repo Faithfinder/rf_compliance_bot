@@ -3,6 +3,7 @@ import { initializeSentry, closeSentry } from "./config/sentry";
 import { createSessionMiddleware } from "./config/session";
 import { registerStartCommand } from "./commands/start";
 import { registerHelpCommand } from "./commands/help";
+import { registerInfoCommand } from "./commands/info";
 import { registerChannelCommands } from "./commands/channel";
 import { registerMessageHandler } from "./handlers/message";
 import { registerErrorHandler } from "./handlers/error";
@@ -16,6 +17,7 @@ bot.use(createSessionMiddleware());
 // Register all commands and handlers
 registerStartCommand();
 registerHelpCommand();
+registerInfoCommand();
 registerChannelCommands();
 registerMessageHandler();
 registerErrorHandler();

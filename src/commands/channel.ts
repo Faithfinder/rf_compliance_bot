@@ -97,32 +97,6 @@ export function registerChannelCommands(): void {
         );
     });
 
-    // /channelstatus command - Show current channel configuration
-    bot.command("channelstatus", async (ctx) => {
-        const userId = ctx.from?.id;
-
-        if (!userId) {
-            return ctx.reply("Unable to identify user.");
-        }
-
-        const channelConfig = ctx.session.channelConfig;
-
-        if (!channelConfig) {
-            return ctx.reply(
-                "You have not configured a channel yet.\n\n" +
-                    "Use /setchannel <@channel or ID> to configure one.\n" +
-                    "Example: /setchannel @mychannel",
-            );
-        }
-
-        return ctx.reply(
-            `Your current channel configuration:\n\n` +
-                `📢 ${formatChannelInfo(channelConfig.channelId, channelConfig.channelTitle)}\n\n` +
-                `All your messages will be posted to this channel.\n` +
-                `Use /removechannel to remove this configuration.`,
-        );
-    });
-
     // /removechannel command - Remove channel configuration
     bot.command("removechannel", async (ctx) => {
         const userId = ctx.from?.id;

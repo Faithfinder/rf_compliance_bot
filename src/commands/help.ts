@@ -10,8 +10,8 @@ Available commands:
 
 /start - Start the bot and see welcome message
 /help - Show this help message
+/info - Show bot configuration summary
 /setchannel <@channel or ID> - Configure channel to post your messages to
-/channelstatus - Show your current channel configuration
 /removechannel - Remove your channel configuration
 
 Example: /setchannel @mychannel
