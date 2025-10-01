@@ -6,7 +6,7 @@ import { resolveChannel, formatChannelInfo } from "../utils";
 /**
  * Shows channel selection UI with error message
  */
-function showChannelSelectionUI(errorMessage?: string): { text: string; keyboard: Keyboard } {
+export function showChannelSelectionUI(errorMessage?: string): { text: string; keyboard: Keyboard } {
     const keyboard = new Keyboard()
         .requestChat("Select Channel", 1, {
             chat_is_channel: true,
