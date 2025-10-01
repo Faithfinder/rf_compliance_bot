@@ -1,5 +1,5 @@
 import { bot } from "../config/bot";
-import { formatChannelInfo } from "../utils";
+import { formatChannelInfo, checkChannelRequirements, formatChannelRequirements } from "../utils";
 
 export function registerInfoCommand(): void {
     bot.command("info", async (ctx) => {
@@ -21,7 +21,12 @@ export function registerInfoCommand(): void {
         if (channelConfig) {
             infoMessage += `📢 *Configured Channel:*\n`;
             infoMessage += `${formatChannelInfo(channelConfig.channelId, channelConfig.channelTitle)}\n\n`;
-            infoMessage += `✅ Messages will be posted to this channel\n`;
+
+            const requirements = await checkChannelRequirements(channelConfig.channelId);
+
+            infoMessage += `📋 *Requirements:*\n`;
+            infoMessage += `${formatChannelRequirements(requirements)}\n\n`;
+
             infoMessage += `Use /removechannel to remove this configuration`;
         } else {
             infoMessage += `📢 *Configured Channel:* None\n\n`;

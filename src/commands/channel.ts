@@ -1,7 +1,13 @@
 import { Keyboard } from "grammy";
 import { bot } from "../config/bot";
 import type { SessionContext } from "../config/session";
-import { resolveChannel, formatChannelInfo } from "../utils";
+import {
+    resolveChannel,
+    formatChannelInfo,
+    checkChannelRequirements,
+    formatChannelRequirements,
+    allRequirementsPassed,
+} from "../utils";
 
 export function showChannelSelectionUI(errorMessage?: string): { text: string; keyboard: Keyboard } {
     const keyboard = new Keyboard()
@@ -24,7 +30,6 @@ export function showChannelSelectionUI(errorMessage?: string): { text: string; k
 
 async function processChannelSelection(ctx: SessionContext, channelIdentifier: string): Promise<void> {
     const chatId = ctx.chat!.id;
-    const warnings: string[] = [];
 
     const workingMsg = await ctx.reply("Resolving channel...");
     const channelInfo = await resolveChannel(channelIdentifier);
@@ -46,35 +51,15 @@ async function processChannelSelection(ctx: SessionContext, channelIdentifier: s
 
     await bot.api.editMessageText(chatId, workingMsg.message_id, "Checking bot permissions...");
 
-    try {
-        const botInfo = await bot.api.getMe();
-        const botMember = await bot.api.getChatMember(channelInfo.id, botInfo.id);
-
-        if (botMember.status !== "administrator" && botMember.status !== "creator") {
-            warnings.push(
-                "Bot does not have permission to post to this channel. Make sure the bot is an administrator with permission to post messages.",
-            );
-        } else if (botMember.status === "administrator" && botMember.can_post_messages !== true) {
-            warnings.push(
-                "Bot is an administrator but doesn't have permission to post messages. Please grant the 'Post Messages' permission.",
-            );
-        }
-    } catch (error) {
-        console.error("Permission check failed:", error);
-        warnings.push(
-            "Unable to check bot permissions for this channel. Make sure the bot has been added to the channel as an administrator.",
-        );
-    }
+    const requirements = await checkChannelRequirements(channelInfo.id);
 
     await bot.api.deleteMessage(chatId, workingMsg.message_id).catch(() => {});
 
-    let responseText =
-        `✅ Channel configured!\n\n` +
-        `Your messages will now be posted to: ${formatChannelInfo(channelInfo.id, channelInfo.title)}`;
+    let responseText = `✅ Channel configured!\n\n`;
+    responseText += `Your messages will now be posted to: ${formatChannelInfo(channelInfo.id, channelInfo.title)}\n\n`;
+    responseText += `📋 Requirements:\n${formatChannelRequirements(requirements)}`;
 
-    if (warnings.length > 0) {
-        responseText += `\n\n⚠️ Warnings:\n${warnings.map((w) => `• ${w}`).join("\n")}`;
-
+    if (!allRequirementsPassed(requirements)) {
         const keyboard = new Keyboard()
             .requestChat("Select Another Channel", 2, {
                 chat_is_channel: true,
