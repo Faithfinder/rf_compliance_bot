@@ -4,7 +4,6 @@
     "": {
       "name": "rf-compliance-bot",
       "dependencies": {
-        "@grammyjs/storage-file": "^2.5.1",
         "@sentry/bun": "^10.17.0",
         "grammy": "^1.38.2",
       },
@@ -39,8 +38,6 @@
     "@eslint/object-schema": ["@eslint/object-schema@2.1.6", "", {}, "sha512-RBMg5FRL0I0gs51M/guSAj5/e14VQ4tpZnQNWwuDT66P14I43ItmPfIZRhO9fUVIPOAQXU47atlywZ/czoqFPA=="],
 
     "@eslint/plugin-kit": ["@eslint/plugin-kit@0.3.5", "", { "dependencies": { "@eslint/core": "^0.15.2", "levn": "^0.4.1" } }, "sha512-Z5kJ+wU3oA7MMIqVR9tyZRtjYPr4OC004Q4Rw7pgOKUOKkJfZ3O24nz3WYfGRpMDNmcOi3TwQOmgm7B7Tpii0w=="],
-
-    "@grammyjs/storage-file": ["@grammyjs/storage-file@2.5.1", "", {}, "sha512-16jrn2IzgJgIZUtcFiA/PI4WBNfHt1dAoimrRzwPyHvM1otNuKwWAAxA6l3m7ys6YrOLlONu4q4swEkPMOT9YA=="],
 
     "@grammyjs/types": ["@grammyjs/types@3.22.1", "", {}, "sha512-QJX0Y8lpjE+/nuTKGmxybKmvdrLHV7gqbhI/UXoWlJLWtowbwk+oW+ngfHKwegD+ewL2SX8+tQo/1E14Ma0qlw=="],
 

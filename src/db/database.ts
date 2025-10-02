@@ -34,6 +34,14 @@ export function initializeDatabase(): void {
         )
     `);
 
+    db.run(`
+        CREATE TABLE IF NOT EXISTS sessions (
+            user_id TEXT PRIMARY KEY,
+            data TEXT NOT NULL DEFAULT '{}',
+            updated_at INTEGER NOT NULL
+        )
+    `);
+
     console.warn("Database initialized at", dbPath);
 }
 
@@ -50,6 +58,10 @@ function ensureDatabase(): Database {
         throw new Error("Database not initialized. Call initializeDatabase() first.");
     }
     return db;
+}
+
+export function getDatabase(): Database {
+    return ensureDatabase();
 }
 
 export function getChannelSettings(channelId: string): ChannelSettingsData | null {

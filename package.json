@@ -26,7 +26,6 @@
     "typescript": "^5"
   },
   "dependencies": {
-    "@grammyjs/storage-file": "^2.5.1",
     "@sentry/bun": "^10.17.0",
     "grammy": "^1.38.2"
   }

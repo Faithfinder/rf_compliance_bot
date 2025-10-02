@@ -1,6 +1,6 @@
 import { Context, session, type SessionFlavor } from "grammy";
-import { FileAdapter } from "@grammyjs/storage-file";
-import { join } from "path";
+import { getDatabase } from "../db/database";
+import { SqliteSessionStorage } from "../db/session-storage";
 
 export interface ChannelConfig {
     channelId: string;
@@ -15,10 +15,11 @@ export interface SessionData {
 export type SessionContext = Context & SessionFlavor<SessionData>;
 
 export function createSessionMiddleware() {
+    const db = getDatabase();
+    const storage = new SqliteSessionStorage<SessionData>(db);
+
     return session({
         initial: (): SessionData => ({}),
-        storage: new FileAdapter<SessionData>({
-            dirName: join(process.cwd(), "data"),
-        }),
+        storage,
     });
 }
