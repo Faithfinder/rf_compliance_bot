@@ -18,7 +18,6 @@ This is a Telegram bot for RF compliance information built with TypeScript, Bun 
 # Development & Running
 bun run dev                  # Development mode with hot reload
 bun run start                # Production mode
-bun run build                # Build for production (outputs to dist/)
 
 # Testing
 bun test                     # Run all tests
