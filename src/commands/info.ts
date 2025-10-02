@@ -1,5 +1,10 @@
 import { bot } from "../config/bot";
-import { formatChannelInfo, checkChannelRequirements, formatChannelRequirements } from "../utils";
+import {
+    formatChannelInfo,
+    checkChannelRequirements,
+    formatChannelRequirements,
+    checkUserChannelPermissions,
+} from "../utils";
 
 export function registerInfoCommand(): void {
     bot.command("info", async (ctx) => {
@@ -26,6 +31,32 @@ export function registerInfoCommand(): void {
 
             infoMessage += `📋 *Requirements:*\n`;
             infoMessage += `${formatChannelRequirements(requirements)}\n\n`;
+
+            const userPermissions = await checkUserChannelPermissions(channelConfig.channelId, userId);
+
+            if (userPermissions) {
+                infoMessage += `👤 *Your Permissions:*\n`;
+
+                if (userPermissions.isMember) {
+                    infoMessage += `✅ Member of the channel\n`;
+                } else {
+                    infoMessage += `❌ Not a member of the channel\n`;
+                }
+
+                if (userPermissions.isAdmin) {
+                    infoMessage += `✅ Administrator\n`;
+                    if (userPermissions.canPostMessages) infoMessage += `✅ Can post messages\n`;
+                    if (userPermissions.canEditMessages) infoMessage += `✅ Can edit messages\n`;
+                    if (userPermissions.canDeleteMessages) infoMessage += `✅ Can delete messages\n`;
+                    if (userPermissions.canManageChat) infoMessage += `✅ Can manage chat\n`;
+                    if (userPermissions.canInviteUsers) infoMessage += `✅ Can invite users\n`;
+                    if (userPermissions.canPinMessages) infoMessage += `✅ Can pin messages\n`;
+                    if (userPermissions.canManageTopics) infoMessage += `✅ Can manage topics\n`;
+                } else {
+                    infoMessage += `❌ Not an administrator\n`;
+                }
+                infoMessage += `\n`;
+            }
 
             infoMessage += `Use /removechannel to remove this configuration`;
         } else {

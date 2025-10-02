@@ -123,3 +123,66 @@ export function formatChannelRequirements(requirements: ChannelRequirements): st
 export function allRequirementsPassed(requirements: ChannelRequirements): boolean {
     return requirements.channelExists && requirements.botIsAdded && requirements.botCanPost;
 }
+
+export interface UserChannelPermissions {
+    isMember: boolean;
+    isAdmin: boolean;
+    canPostMessages?: boolean;
+    canEditMessages?: boolean;
+    canDeleteMessages?: boolean;
+    canManageChat?: boolean;
+    canInviteUsers?: boolean;
+    canPinMessages?: boolean;
+    canManageTopics?: boolean;
+}
+
+/**
+ * Checks if user is a member/administrator in the configured channel and returns their permissions
+ * @param channelId The channel ID to check
+ * @param userId The user ID to check
+ * @returns User permissions, or null if error occurred
+ */
+export async function checkUserChannelPermissions(
+    channelId: string,
+    userId: number,
+): Promise<UserChannelPermissions | null> {
+    try {
+        const member = await bot.api.getChatMember(channelId, userId);
+
+        const isMember = member.status === "member" || member.status === "administrator" || member.status === "creator";
+        const isAdmin = member.status === "administrator" || member.status === "creator";
+
+        if (!isAdmin) {
+            return { isMember, isAdmin: false };
+        }
+
+        if (member.status === "creator") {
+            return {
+                isMember: true,
+                isAdmin: true,
+                canPostMessages: true,
+                canEditMessages: true,
+                canDeleteMessages: true,
+                canManageChat: true,
+                canInviteUsers: true,
+                canPinMessages: true,
+                canManageTopics: true,
+            };
+        }
+
+        return {
+            isMember: true,
+            isAdmin: true,
+            canPostMessages: member.can_post_messages,
+            canEditMessages: member.can_edit_messages,
+            canDeleteMessages: member.can_delete_messages,
+            canManageChat: member.can_manage_chat,
+            canInviteUsers: member.can_invite_users,
+            canPinMessages: member.can_pin_messages,
+            canManageTopics: member.can_manage_topics,
+        };
+    } catch (error) {
+        console.error("Error checking user permissions:", error);
+        return null;
+    }
+}
