@@ -1,11 +1,7 @@
 import * as Sentry from "@sentry/bun";
 import { Keyboard } from "grammy";
 import { bot } from "../config/bot";
-import {
-    formatChannelInfo,
-    checkChannelRequirements,
-    formatChannelRequirements,
-} from "../utils";
+import { formatChannelInfo, checkChannelRequirements, formatChannelRequirements } from "../utils";
 
 export function registerMessageHandler(): void {
     bot.on("message", async (ctx) => {

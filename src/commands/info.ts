@@ -5,6 +5,7 @@ import {
     formatChannelRequirements,
     checkUserChannelPermissions,
 } from "../utils";
+import { getChannelSettings } from "../db/database";
 
 export function registerInfoCommand(): void {
     bot.command("info", async (ctx) => {
@@ -31,6 +32,13 @@ export function registerInfoCommand(): void {
 
             infoMessage += `📋 *Requirements:*\n`;
             infoMessage += `${formatChannelRequirements(requirements)}\n\n`;
+
+            const channelSettings = getChannelSettings(channelConfig.channelId);
+
+            if (channelSettings?.foreignAgentBlurb) {
+                infoMessage += `⚙️ *Channel Settings:*\n`;
+                infoMessage += `🌍 Foreign Agent Blurb: ${channelSettings.foreignAgentBlurb}\n\n`;
+            }
 
             const userPermissions = await checkUserChannelPermissions(channelConfig.channelId, userId);
 

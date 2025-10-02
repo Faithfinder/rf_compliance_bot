@@ -1,14 +1,13 @@
 import { describe, test, expect } from "bun:test";
 import { formatChannelInfo } from "../src/utils";
 
-
 describe("Utility Functions", () => {
     test("should format channel info with title", () => {
         const channelId = "-1001234567890";
         const channelTitle = "Test Channel";
 
         const formatted = formatChannelInfo(channelId, channelTitle);
-        expect(formatted).toBe("Test Channel (-1001234567890)");
+        expect(formatted).toBe("Test Channel (`-1001234567890`)");
     });
 
     test("should format channel info without title", () => {
