@@ -60,6 +60,12 @@ async function processChannelSelection(ctx: SessionContext, channelIdentifier: s
     responseText += `📋 Requirements:\n${formatChannelRequirements(requirements)}`;
 
     if (!allRequirementsPassed(requirements)) {
+        responseText += `\n\n`;
+
+        if (!requirements.foreignAgentBlurbConfigured) {
+            responseText += `**Next step:** Use \`/settings <your blurb text>\` to configure the foreign agent blurb. Only channel administrators can configure settings.\n\n`;
+        }
+
         const keyboard = new Keyboard()
             .requestChat("Select Another Channel", 2, {
                 chat_is_channel: true,
@@ -70,7 +76,7 @@ async function processChannelSelection(ctx: SessionContext, channelIdentifier: s
             .oneTime();
 
         ctx.session.awaitingChannelSelection = true;
-        await ctx.reply(responseText, { reply_markup: keyboard });
+        await ctx.reply(responseText, { reply_markup: keyboard, parse_mode: "Markdown" });
     } else {
         responseText += `\n\nSend me any message to test it out.`;
         await ctx.reply(responseText, { reply_markup: { remove_keyboard: true } });

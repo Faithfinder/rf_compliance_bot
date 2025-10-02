@@ -77,7 +77,7 @@ export function getChannelSettings(channelId: string): ChannelSettingsData | nul
         return null;
     }
 
-    return JSON.parse(result.settings) as ChannelSettingsData
+    return JSON.parse(result.settings) as ChannelSettingsData;
 }
 
 export function updateChannelSettings(channelId: string, settings: Partial<ChannelSettingsData>): void {

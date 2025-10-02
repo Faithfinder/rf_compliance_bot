@@ -2,6 +2,7 @@ import * as Sentry from "@sentry/bun";
 import { Keyboard } from "grammy";
 import { bot } from "../config/bot";
 import { formatChannelInfo, checkChannelRequirements, formatChannelRequirements } from "../utils";
+import { getChannelSettings } from "../db/database";
 
 export function registerMessageHandler(): void {
     bot.on("message", async (ctx) => {
@@ -19,6 +20,30 @@ export function registerMessageHandler(): void {
                     "Use /setchannel <@channel or ID> to configure one.\n" +
                     "Example: /setchannel @mychannel",
             );
+        }
+
+        const channelSettings = getChannelSettings(channelConfig.channelId);
+        const foreignAgentBlurb = channelSettings?.foreignAgentBlurb;
+
+        if (!foreignAgentBlurb) {
+            const requirements = await checkChannelRequirements(channelConfig.channelId);
+
+            let errorMessage = `❌ Cannot post message: Foreign agent blurb is not configured for ${formatChannelInfo(channelConfig.channelId, channelConfig.channelTitle)}\n\n`;
+            errorMessage += `📋 Requirements:\n${formatChannelRequirements(requirements)}\n\n`;
+            errorMessage += `**Next step:** Use \`/settings <your blurb text>\` to configure the foreign agent blurb for this channel.\n\n`;
+            errorMessage += `Only channel administrators can configure settings.`;
+
+            return ctx.reply(errorMessage, { parse_mode: "Markdown" });
+        }
+
+        const messageText = ctx.message.text || ctx.message.caption;
+
+        if (!messageText || !messageText.includes(foreignAgentBlurb)) {
+            let errorMessage = `❌ Cannot post message: Your message must include the foreign agent blurb.\n\n`;
+            errorMessage += `🌍 *Required Blurb:*\n${foreignAgentBlurb}\n\n`;
+            errorMessage += `Please add this text to your message and try again.`;
+
+            return ctx.reply(errorMessage, { parse_mode: "Markdown" });
         }
 
         try {

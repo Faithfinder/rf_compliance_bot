@@ -9,10 +9,7 @@ export class SqliteSessionStorage<T> implements StorageAdapter<T> {
     }
 
     read(key: string): T | undefined {
-        const query = this.db.query<
-            { data: string },
-            [string]
-        >("SELECT data FROM sessions WHERE user_id = ?");
+        const query = this.db.query<{ data: string }, [string]>("SELECT data FROM sessions WHERE user_id = ?");
 
         const result = query.get(key);
 

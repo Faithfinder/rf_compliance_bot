@@ -1,4 +1,5 @@
 import { bot } from "./config/bot";
+import { getChannelSettings } from "./db/database";
 
 interface ChannelInfo {
     id: string;
@@ -58,6 +59,7 @@ export interface ChannelRequirements {
     channelExists: boolean;
     botIsAdded: boolean;
     botCanPost: boolean;
+    foreignAgentBlurbConfigured: boolean;
 }
 
 /**
@@ -70,6 +72,7 @@ export async function checkChannelRequirements(channelId: string): Promise<Chann
         channelExists: false,
         botIsAdded: false,
         botCanPost: false,
+        foreignAgentBlurbConfigured: false,
     };
 
     try {
@@ -95,6 +98,9 @@ export async function checkChannelRequirements(channelId: string): Promise<Chann
         console.error("Permission check failed:", error);
     }
 
+    const channelSettings = getChannelSettings(channelId);
+    requirements.foreignAgentBlurbConfigured = !!channelSettings?.foreignAgentBlurb;
+
     return requirements;
 }
 
@@ -110,6 +116,9 @@ export function formatChannelRequirements(requirements: ChannelRequirements): st
         ),
         requirements.botIsAdded ? "✅ 🤖 Bot is added to the channel" : "❌ 🤖 Bot is not added to the channel",
         requirements.botCanPost ? "✅ 🤖 Bot can post to the channel" : "❌ 🤖 Bot lacks permission to post messages",
+        requirements.foreignAgentBlurbConfigured ?
+            "✅ 🌍 Foreign agent blurb is configured"
+        :   "❌ 🌍 Foreign agent blurb is not configured",
     ];
 
     return lines.join("\n");
@@ -121,7 +130,12 @@ export function formatChannelRequirements(requirements: ChannelRequirements): st
  * @returns True if all requirements are met
  */
 export function allRequirementsPassed(requirements: ChannelRequirements): boolean {
-    return requirements.channelExists && requirements.botIsAdded && requirements.botCanPost;
+    return (
+        requirements.channelExists &&
+        requirements.botIsAdded &&
+        requirements.botCanPost &&
+        requirements.foreignAgentBlurbConfigured
+    );
 }
 
 export interface UserChannelPermissions {
