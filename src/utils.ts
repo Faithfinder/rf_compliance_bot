@@ -111,14 +111,14 @@ export async function checkChannelRequirements(channelId: string): Promise<Chann
  */
 export function formatChannelRequirements(requirements: ChannelRequirements): string {
     const lines = [
-        requirements.channelExists ? "✅ Configured channel exists" : (
-            "❌ Channel doesn't exist or bot cannot access it"
+        requirements.channelExists ? "✅ Настроенный канал существует" : (
+            "❌ Канал не существует или бот не может получить к нему доступ"
         ),
-        requirements.botIsAdded ? "✅ 🤖 Bot is added to the channel" : "❌ 🤖 Bot is not added to the channel",
-        requirements.botCanPost ? "✅ 🤖 Bot can post to the channel" : "❌ 🤖 Bot lacks permission to post messages",
+        requirements.botIsAdded ? "✅ 🤖 Бот добавлен в канал" : "❌ 🤖 Бот не добавлен в канал",
+        requirements.botCanPost ? "✅ 🤖 Бот может публиковать сообщения в канал" : "❌ 🤖 Бот не имеет разрешения публиковать сообщения",
         requirements.foreignAgentBlurbConfigured ?
-            "✅ 🌍 Foreign agent blurb is configured"
-        :   "❌ 🌍 Foreign agent blurb is not configured",
+            "✅ 🌍 Текст иностранного агента настроен"
+        :   "❌ 🌍 Текст иностранного агента не настроен",
     ];
 
     return lines.join("\n");

@@ -7,16 +7,16 @@ export function registerSettingsCommand(): void {
         const userId = ctx.from?.id;
 
         if (!userId) {
-            return ctx.reply("Unable to identify user.");
+            return ctx.reply("Не удается идентифицировать пользователя.");
         }
 
         const channelConfig = ctx.session.channelConfig;
 
         if (!channelConfig) {
             return ctx.reply(
-                "You have not configured a channel yet.\n\n" +
-                    "Use /setchannel <@channel or ID> to configure one.\n" +
-                    "Example: /setchannel @mychannel",
+                "Вы еще не настроили канал.\n\n" +
+                    "Используйте /setchannel <@channel или ID> для настройки.\n" +
+                    "Пример: /setchannel @mychannel",
             );
         }
 
@@ -26,18 +26,18 @@ export function registerSettingsCommand(): void {
         if (isViewMode) {
             const channelSettings = getChannelSettings(channelConfig.channelId);
 
-            let message = `⚙️ *Channel Settings*\n\n`;
-            message += `📢 *Channel:* ${formatChannelInfo(channelConfig.channelId, channelConfig.channelTitle)}\n\n`;
-            message += `🌍 *Foreign Agent Blurb:*\n`;
+            let message = `⚙️ *Настройки канала*\n\n`;
+            message += `📢 *Канал:* ${formatChannelInfo(channelConfig.channelId, channelConfig.channelTitle)}\n\n`;
+            message += `🌍 *Текст иностранного агента:*\n`;
 
             if (channelSettings?.foreignAgentBlurb) {
                 message += `${channelSettings.foreignAgentBlurb}\n\n`;
             } else {
-                message += `_Not configured_\n\n`;
+                message += `_Не настроено_\n\n`;
             }
 
-            message += `To update the foreign agent blurb, use:\n`;
-            message += `/settings <your text here>`;
+            message += `Чтобы обновить текст иностранного агента, используйте:\n`;
+            message += `/settings <ваш текст>`;
 
             return ctx.reply(message, { parse_mode: "Markdown" });
         }
@@ -46,22 +46,22 @@ export function registerSettingsCommand(): void {
 
         if (!permissions?.canManageChat) {
             return ctx.reply(
-                "❌ You must be an administrator of the configured channel to modify settings.\n\n" +
-                    "Only channel administrators can update shared channel settings.",
+                "❌ Вы должны быть администратором настроенного канала для изменения настроек.\n\n" +
+                    "Только администраторы канала могут обновлять общие настройки канала.",
             );
         }
 
         const newBlurb = (args as string).trim();
 
         if (newBlurb.length === 0) {
-            return ctx.reply("❌ Foreign agent blurb cannot be empty. Please provide some text.");
+            return ctx.reply("❌ Текст иностранного агента не может быть пустым. Пожалуйста, укажите текст.");
         }
 
         updateChannelSettings(channelConfig.channelId, { foreignAgentBlurb: newBlurb });
 
-        let confirmMessage = `✅ Foreign agent blurb updated successfully!\n\n`;
-        confirmMessage += `📢 *Channel:* ${formatChannelInfo(channelConfig.channelId, channelConfig.channelTitle)}\n\n`;
-        confirmMessage += `🌍 *New Foreign Agent Blurb:*\n${newBlurb}`;
+        let confirmMessage = `✅ Текст иностранного агента успешно обновлен!\n\n`;
+        confirmMessage += `📢 *Канал:* ${formatChannelInfo(channelConfig.channelId, channelConfig.channelTitle)}\n\n`;
+        confirmMessage += `🌍 *Новый текст иностранного агента:*\n${newBlurb}`;
 
         return ctx.reply(confirmMessage, { parse_mode: "Markdown" });
     });

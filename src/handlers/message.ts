@@ -9,16 +9,16 @@ export function registerMessageHandler(): void {
         const userId = ctx.from?.id;
 
         if (!userId) {
-            return ctx.reply("Unable to identify user.");
+            return ctx.reply("Не удается идентифицировать пользователя.");
         }
 
         const channelConfig = ctx.session.channelConfig;
 
         if (!channelConfig) {
             return ctx.reply(
-                "You have not configured a channel yet.\n\n" +
-                    "Use /setchannel <@channel or ID> to configure one.\n" +
-                    "Example: /setchannel @mychannel",
+                "Вы еще не настроили канал.\n\n" +
+                    "Используйте /setchannel <@channel или ID> для настройки.\n" +
+                    "Пример: /setchannel @mychannel",
             );
         }
 
@@ -28,10 +28,10 @@ export function registerMessageHandler(): void {
         if (!foreignAgentBlurb) {
             const requirements = await checkChannelRequirements(channelConfig.channelId);
 
-            let errorMessage = `❌ Cannot post message: Foreign agent blurb is not configured for ${formatChannelInfo(channelConfig.channelId, channelConfig.channelTitle)}\n\n`;
-            errorMessage += `📋 Requirements:\n${formatChannelRequirements(requirements)}\n\n`;
-            errorMessage += `**Next step:** Use \`/settings <your blurb text>\` to configure the foreign agent blurb for this channel.\n\n`;
-            errorMessage += `Only channel administrators can configure settings.`;
+            let errorMessage = `❌ Невозможно опубликовать сообщение: Блурб иностранного агента не настроен для ${formatChannelInfo(channelConfig.channelId, channelConfig.channelTitle)}\n\n`;
+            errorMessage += `📋 Требования:\n${formatChannelRequirements(requirements)}\n\n`;
+            errorMessage += `**Следующий шаг:** Используйте \`/settings <ваш текст>\` для настройки текста иностранного агента для этого канала.\n\n`;
+            errorMessage += `Только администраторы канала могут настраивать параметры.`;
 
             return ctx.reply(errorMessage, { parse_mode: "Markdown" });
         }
@@ -39,9 +39,9 @@ export function registerMessageHandler(): void {
         const messageText = ctx.message.text || ctx.message.caption;
 
         if (!messageText || !messageText.includes(foreignAgentBlurb)) {
-            let errorMessage = `❌ Cannot post message: Your message must include the foreign agent blurb.\n\n`;
-            errorMessage += `🌍 *Required Blurb:*\n${foreignAgentBlurb}\n\n`;
-            errorMessage += `Please add this text to your message and try again.`;
+            let errorMessage = `❌ Невозможно опубликовать сообщение: Ваше сообщение должно содержать текст иностранного агента.\n\n`;
+            errorMessage += `🌍 *Необходимый текст:*\n${foreignAgentBlurb}\n\n`;
+            errorMessage += `Пожалуйста, добавьте этот текст к вашему сообщению и повторите попытку.`;
 
             return ctx.reply(errorMessage, { parse_mode: "Markdown" });
         }
@@ -50,7 +50,7 @@ export function registerMessageHandler(): void {
             await ctx.api.copyMessage(channelConfig.channelId, ctx.chat.id, ctx.message.message_id);
 
             return ctx.reply(
-                `✅ Message posted to ${formatChannelInfo(channelConfig.channelId, channelConfig.channelTitle)}`,
+                `✅ Сообщение опубликовано в ${formatChannelInfo(channelConfig.channelId, channelConfig.channelTitle)}`,
             );
         } catch (error) {
             console.error("Error posting to channel:", error);
@@ -67,15 +67,15 @@ export function registerMessageHandler(): void {
 
             const requirements = await checkChannelRequirements(channelConfig.channelId);
 
-            let errorMessage = `❌ Failed to post message to ${formatChannelInfo(channelConfig.channelId, channelConfig.channelTitle)}\n\n`;
-            errorMessage += `📋 Requirements:\n${formatChannelRequirements(requirements)}\n\n`;
+            let errorMessage = `❌ Не удалось опубликовать сообщение в ${formatChannelInfo(channelConfig.channelId, channelConfig.channelTitle)}\n\n`;
+            errorMessage += `📋 Требования:\n${formatChannelRequirements(requirements)}\n\n`;
 
             if (!requirements.channelExists) {
                 errorMessage +=
-                    "**Next step:** The channel no longer exists or the bot cannot access it. Please select a different channel.";
+                    "**Следующий шаг:** Канал больше не существует или бот не может получить к нему доступ. Пожалуйста, выберите другой канал.";
 
                 const keyboard = new Keyboard()
-                    .requestChat("Select Another Channel", 1, {
+                    .requestChat("Выбрать другой канал", 1, {
                         chat_is_channel: true,
                         bot_is_member: true,
                     })
@@ -87,13 +87,13 @@ export function registerMessageHandler(): void {
                 return ctx.reply(errorMessage, { reply_markup: keyboard });
             } else if (!requirements.botIsAdded) {
                 errorMessage +=
-                    "**Next step:** Ask your channel administrator to add this bot as an administrator to the channel.";
+                    "**Следующий шаг:** Попросите администратора канала добавить этого бота в качестве администратора в канал.";
             } else if (!requirements.botCanPost) {
                 errorMessage +=
-                    '**Next step:** Ask your channel administrator to grant the bot "Post Messages" permission.';
+                    '**Следующий шаг:** Попросите администратора канала предоставить боту разрешение "Публиковать сообщения".';
             }
 
-            errorMessage += "\n\nAlternatively, use /setchannel to configure a different channel";
+            errorMessage += "\n\nИли используйте /setchannel для настройки другого канала";
 
             return ctx.reply(errorMessage);
         }

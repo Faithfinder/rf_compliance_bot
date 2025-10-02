@@ -3,15 +3,15 @@ import { bot } from "../config/bot";
 export function registerHelpCommand(): void {
     bot.command("help", (ctx) => {
         const helpMessage = `
-Available commands:
+Доступные команды:
 
-/start - Start the bot and see welcome message
-/help - Show this help message
-/info - Show bot configuration summary
-/setchannel <@channel or ID> - Configure channel to post your messages to
-/removechannel - Remove your channel configuration
+/start - Запустить бота и показать приветственное сообщение
+/help - Показать это справочное сообщение
+/info - Показать сводку конфигурации бота
+/setchannel <@channel или ID> - Настроить канал для публикации ваших сообщений
+/removechannel - Удалить настройку канала
 
-Example: /setchannel @mychannel
+Пример: /setchannel @mychannel
     `.trim();
 
         return ctx.reply(helpMessage);

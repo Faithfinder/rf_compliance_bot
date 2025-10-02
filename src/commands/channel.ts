@@ -11,7 +11,7 @@ import {
 
 export function showChannelSelectionUI(errorMessage?: string): { text: string; keyboard: Keyboard } {
     const keyboard = new Keyboard()
-        .requestChat("Select Channel", 1, {
+        .requestChat("Выбрать канал", 1, {
             chat_is_channel: true,
             bot_is_member: true,
         })
@@ -19,7 +19,7 @@ export function showChannelSelectionUI(errorMessage?: string): { text: string; k
         .oneTime();
 
     let text =
-        "Please select a channel from the button below, or use:\n/setchannel <@channel or ID>\n\nExample: /setchannel @mychannel";
+        "Пожалуйста, выберите канал из кнопки ниже или используйте:\n/setchannel <@channel или ID>\n\nПример: /setchannel @mychannel";
 
     if (errorMessage) {
         text = `❌ ${errorMessage}\n\n${text}`;
@@ -31,13 +31,13 @@ export function showChannelSelectionUI(errorMessage?: string): { text: string; k
 async function processChannelSelection(ctx: SessionContext, channelIdentifier: string): Promise<void> {
     const chatId = ctx.chat!.id;
 
-    const workingMsg = await ctx.reply("Resolving channel...");
+    const workingMsg = await ctx.reply("Поиск канала...");
     const channelInfo = await resolveChannel(channelIdentifier);
 
     if (!channelInfo) {
         await bot.api.deleteMessage(chatId, workingMsg.message_id).catch(() => {});
         const errorMessage =
-            "Unable to find or access that channel. Make sure the bot has been added to the channel as an administrator.";
+            "Не удается найти или получить доступ к этому каналу. Убедитесь, что бот был добавлен в канал в качестве администратора.";
         const { text, keyboard } = showChannelSelectionUI(errorMessage);
         ctx.session.awaitingChannelSelection = true;
         await ctx.reply(text, { reply_markup: keyboard });
@@ -49,25 +49,25 @@ async function processChannelSelection(ctx: SessionContext, channelIdentifier: s
         channelTitle: channelInfo.title,
     };
 
-    await bot.api.editMessageText(chatId, workingMsg.message_id, "Checking bot permissions...");
+    await bot.api.editMessageText(chatId, workingMsg.message_id, "Проверка разрешений бота...");
 
     const requirements = await checkChannelRequirements(channelInfo.id);
 
     await bot.api.deleteMessage(chatId, workingMsg.message_id).catch(() => {});
 
-    let responseText = `✅ Channel configured!\n\n`;
-    responseText += `Your messages will now be posted to: ${formatChannelInfo(channelInfo.id, channelInfo.title)}\n\n`;
-    responseText += `📋 Requirements:\n${formatChannelRequirements(requirements)}`;
+    let responseText = `✅ Канал настроен!\n\n`;
+    responseText += `Ваши сообщения теперь будут публиковаться в: ${formatChannelInfo(channelInfo.id, channelInfo.title)}\n\n`;
+    responseText += `📋 Требования:\n${formatChannelRequirements(requirements)}`;
 
     if (!allRequirementsPassed(requirements)) {
         responseText += `\n\n`;
 
         if (!requirements.foreignAgentBlurbConfigured) {
-            responseText += `**Next step:** Use \`/settings <your blurb text>\` to configure the foreign agent blurb. Only channel administrators can configure settings.\n\n`;
+            responseText += `**Следующий шаг:** Используйте \`/settings <ваш текст>\` для настройки текста иностранного агента. Только администраторы канала могут настраивать параметры.\n\n`;
         }
 
         const keyboard = new Keyboard()
-            .requestChat("Select Another Channel", 2, {
+            .requestChat("Выбрать другой канал", 2, {
                 chat_is_channel: true,
                 bot_is_member: true,
             })
@@ -78,7 +78,7 @@ async function processChannelSelection(ctx: SessionContext, channelIdentifier: s
         ctx.session.awaitingChannelSelection = true;
         await ctx.reply(responseText, { reply_markup: keyboard, parse_mode: "Markdown" });
     } else {
-        responseText += `\n\nSend me any message to test it out.`;
+        responseText += `\n\nОтправьте мне любое сообщение, чтобы проверить его.`;
         await ctx.reply(responseText, { reply_markup: { remove_keyboard: true } });
     }
 }
@@ -88,7 +88,7 @@ export function registerChannelCommands(): void {
         const userId = ctx.from?.id;
 
         if (!userId) {
-            return ctx.reply("Unable to identify user.");
+            return ctx.reply("Не удается идентифицировать пользователя.");
         }
 
         const args = ctx.match;
@@ -106,17 +106,17 @@ export function registerChannelCommands(): void {
         const userId = ctx.from?.id;
 
         if (!userId) {
-            return ctx.reply("Unable to identify user.");
+            return ctx.reply("Не удается идентифицировать пользователя.");
         }
 
         if (!ctx.session.channelConfig) {
-            return ctx.reply("You do not have a channel configured.");
+            return ctx.reply("У вас не настроен канал.");
         }
 
         delete ctx.session.channelConfig;
 
         return ctx.reply(
-            "✅ Channel configuration removed successfully.\n\nYour messages will no longer be posted to any channel.",
+            "✅ Конфигурация канала успешно удалена.\n\nВаши сообщения больше не будут публиковаться ни в какой канал.",
         );
     });
 
@@ -124,7 +124,7 @@ export function registerChannelCommands(): void {
         const userId = ctx.from?.id;
 
         if (!userId) {
-            return ctx.reply("Unable to identify user.");
+            return ctx.reply("Не удается идентифицировать пользователя.");
         }
 
         if (!ctx.session.awaitingChannelSelection) {

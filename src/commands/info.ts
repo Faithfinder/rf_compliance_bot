@@ -12,65 +12,65 @@ export function registerInfoCommand(): void {
         const userId = ctx.from?.id;
 
         if (!userId || !ctx.from) {
-            return ctx.reply("Unable to identify user.");
+            return ctx.reply("Не удается идентифицировать пользователя.");
         }
 
         const channelConfig = ctx.session.channelConfig;
 
-        let infoMessage = "🤖 *Bot Configuration*\n\n";
-        infoMessage += `👤 *User:* ${ctx.from.first_name}`;
+        let infoMessage = "🤖 *Конфигурация бота*\n\n";
+        infoMessage += `👤 *Пользователь:* ${ctx.from.first_name}`;
         if (ctx.from.username) {
             infoMessage += ` (@${ctx.from.username})`;
         }
-        infoMessage += `\n📱 *User ID:* \`${userId}\`\n\n`;
+        infoMessage += `\n📱 *ID пользователя:* \`${userId}\`\n\n`;
 
         if (channelConfig) {
-            infoMessage += `📢 *Configured Channel:*\n`;
+            infoMessage += `📢 *Настроенный канал:*\n`;
             infoMessage += `${formatChannelInfo(channelConfig.channelId, channelConfig.channelTitle)}\n\n`;
 
             const requirements = await checkChannelRequirements(channelConfig.channelId);
 
-            infoMessage += `📋 *Requirements:*\n`;
+            infoMessage += `📋 *Требования:*\n`;
             infoMessage += `${formatChannelRequirements(requirements)}\n\n`;
 
             const channelSettings = getChannelSettings(channelConfig.channelId);
 
             if (channelSettings?.foreignAgentBlurb) {
-                infoMessage += `⚙️ *Channel Settings:*\n`;
-                infoMessage += `🌍 Foreign Agent Blurb: ${channelSettings.foreignAgentBlurb}\n\n`;
+                infoMessage += `⚙️ *Настройки канала:*\n`;
+                infoMessage += `🌍 Текст иностранного агента: ${channelSettings.foreignAgentBlurb}\n\n`;
             }
 
             const userPermissions = await checkUserChannelPermissions(channelConfig.channelId, userId);
 
             if (userPermissions) {
-                infoMessage += `👤 *Your Permissions:*\n`;
+                infoMessage += `👤 *Ваши разрешения:*\n`;
 
                 if (userPermissions.isMember) {
-                    infoMessage += `✅ Member of the channel\n`;
+                    infoMessage += `✅ Участник канала\n`;
                 } else {
-                    infoMessage += `❌ Not a member of the channel\n`;
+                    infoMessage += `❌ Не является участником канала\n`;
                 }
 
                 if (userPermissions.isAdmin) {
-                    infoMessage += `✅ Administrator\n`;
-                    if (userPermissions.canPostMessages) infoMessage += `✅ Can post messages\n`;
-                    if (userPermissions.canEditMessages) infoMessage += `✅ Can edit messages\n`;
-                    if (userPermissions.canDeleteMessages) infoMessage += `✅ Can delete messages\n`;
-                    if (userPermissions.canManageChat) infoMessage += `✅ Can manage chat\n`;
-                    if (userPermissions.canInviteUsers) infoMessage += `✅ Can invite users\n`;
-                    if (userPermissions.canPinMessages) infoMessage += `✅ Can pin messages\n`;
-                    if (userPermissions.canManageTopics) infoMessage += `✅ Can manage topics\n`;
+                    infoMessage += `✅ Администратор\n`;
+                    if (userPermissions.canPostMessages) infoMessage += `✅ Может публиковать сообщения\n`;
+                    if (userPermissions.canEditMessages) infoMessage += `✅ Может редактировать сообщения\n`;
+                    if (userPermissions.canDeleteMessages) infoMessage += `✅ Может удалять сообщения\n`;
+                    if (userPermissions.canManageChat) infoMessage += `✅ Может управлять чатом\n`;
+                    if (userPermissions.canInviteUsers) infoMessage += `✅ Может приглашать пользователей\n`;
+                    if (userPermissions.canPinMessages) infoMessage += `✅ Может закреплять сообщения\n`;
+                    if (userPermissions.canManageTopics) infoMessage += `✅ Может управлять темами\n`;
                 } else {
-                    infoMessage += `❌ Not an administrator\n`;
+                    infoMessage += `❌ Не является администратором\n`;
                 }
                 infoMessage += `\n`;
             }
 
-            infoMessage += `Use /removechannel to remove this configuration`;
+            infoMessage += `Используйте /removechannel для удаления этой конфигурации`;
         } else {
-            infoMessage += `📢 *Configured Channel:* None\n\n`;
-            infoMessage += `❌ No channel configured\n`;
-            infoMessage += `Use /setchannel to configure one`;
+            infoMessage += `📢 *Настроенный канал:* Нет\n\n`;
+            infoMessage += `❌ Канал не настроен\n`;
+            infoMessage += `Используйте /setchannel для настройки`;
         }
 
         return ctx.reply(infoMessage, { parse_mode: "Markdown" });
