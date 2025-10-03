@@ -20,15 +20,16 @@ export function registerInfoCommand(): void {
         const channelConfig = ctx.session.channelConfig;
 
         let infoMessage = "🤖 *Конфигурация бота*\n\n";
-        infoMessage += `👤 *Пользователь:* ${ctx.from.first_name}`;
+        infoMessage += `👤 *Пользователь:* ${escapeMarkdown(ctx.from.first_name)}`;
         if (ctx.from.username) {
-            infoMessage += ` (@${ctx.from.username})`;
+            infoMessage += ` (@${escapeMarkdown(ctx.from.username)})`;
         }
         infoMessage += `\n📱 *ID пользователя:* \`${userId}\`\n\n`;
 
         if (channelConfig) {
             infoMessage += `📢 *Настроенный канал:*\n`;
-            infoMessage += `${formatChannelInfo(channelConfig.channelId, channelConfig.channelTitle)}\n`;
+            const channelTitle = channelConfig.channelTitle ? escapeMarkdown(channelConfig.channelTitle) : undefined;
+            infoMessage += `${channelTitle ? `${channelTitle} (\`${channelConfig.channelId}\`)` : channelConfig.channelId}\n`;
             if (isFixedChannelMode()) {
                 infoMessage += `🔒 Фиксированный канал (установлен администратором)\n`;
             }
