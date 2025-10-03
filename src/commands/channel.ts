@@ -63,7 +63,8 @@ async function processChannelSelection(ctx: SessionContext, channelIdentifier: s
         responseText += `\n\n`;
 
         if (!requirements.foreignAgentBlurbConfigured) {
-            responseText += `**Следующий шаг:** Используйте \`/set_fa_blurb <ваш текст>\` для настройки текста иностранного агента. Только администраторы канала могут настраивать параметры.\n\n`;
+            // eslint-disable-next-line no-useless-escape
+            responseText += `**Следующий шаг:** Используйте \`/set\_fa\_blurb <ваш текст>\` для настройки текста иностранного агента. Только администраторы канала могут настраивать параметры.\n\n`;
         }
 
         const keyboard = new Keyboard()

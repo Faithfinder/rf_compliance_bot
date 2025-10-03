@@ -37,7 +37,8 @@ export function registerSettingsCommand(): void {
             }
 
             message += `Чтобы обновить текст иностранного агента, используйте:\n`;
-            message += `/set_fa_blurb <ваш текст>`;
+            // eslint-disable-next-line no-useless-escape
+            message += `/set\_fa\_blurb <ваш текст>`;
 
             return ctx.reply(message, { parse_mode: "Markdown" });
         }
