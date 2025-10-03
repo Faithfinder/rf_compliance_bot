@@ -4,6 +4,7 @@ import { registerInfoCommand } from "./info";
 import { registerChannelCommands } from "./channel";
 import { registerSettingsCommand } from "./settings";
 import { isFixedChannelMode } from "../config/environment";
+import { escapeMarkdown } from "../utils";
 
 export interface CommandDefinition {
     command: string;
@@ -51,8 +52,7 @@ export const commandDefinitions: CommandDefinition[] = [
         command: "set_fa_blurb",
         description: "Настроить текст иностранного агента",
         helpText:
-            // eslint-disable-next-line no-useless-escape
-            "/set\_fa\_blurb <текст> - Настроить текст иностранного агента для канала\nПример: /set\_fa\_blurb НАСТОЯЩИЙ МАТЕРИАЛ (ИНФОРМАЦИЯ) ПРОИЗВЕДЕН И РАСПРОСТРАНЕН ИНОСТРАННЫМ АГЕНТОМ «ИМЯ АГЕНТА» ЛИБО КАСАЕТСЯ ДЕЯТЕЛЬНОСТИ ИНОСТРАННОГО АГЕНТА «ИМЯ АГЕНТА». 18+",
+            `${escapeMarkdown("/set_fa_blurb")} <текст> - Настроить текст иностранного агента для канала\nПример: ${escapeMarkdown("/set_fa_blurb")} НАСТОЯЩИЙ МАТЕРИАЛ (ИНФОРМАЦИЯ) ПРОИЗВЕДЕН И РАСПРОСТРАНЕН ИНОСТРАННЫМ АГЕНТОМ «ИМЯ АГЕНТА» ЛИБО КАСАЕТСЯ ДЕЯТЕЛЬНОСТИ ИНОСТРАННОГО АГЕНТА «ИМЯ АГЕНТА». 18+`,
         register: registerSettingsCommand,
     },
 ];

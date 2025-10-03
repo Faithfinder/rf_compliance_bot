@@ -7,6 +7,15 @@ interface ChannelInfo {
 }
 
 /**
+ * Escapes special characters in text for Markdown formatting
+ * @param text The text to escape
+ * @returns Escaped text safe for Markdown
+ */
+export function escapeMarkdown(text: string): string {
+    return text.replace(/[_*[\]()~`>#+=|{}.!-]/g, "\\$&");
+}
+
+/**
  * Resolves a channel identifier (handle or ID) to a validated channel info
  * @param identifier Channel handle (e.g., @channelname) or numeric ID (e.g., -1001234567890)
  * @returns Channel info if valid and bot has access, null otherwise

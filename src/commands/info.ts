@@ -4,6 +4,7 @@ import {
     checkChannelRequirements,
     formatChannelRequirements,
     checkUserChannelPermissions,
+    escapeMarkdown,
 } from "../utils";
 import { getChannelSettings } from "../db/database";
 import { isFixedChannelMode } from "../config/environment";
@@ -42,7 +43,7 @@ export function registerInfoCommand(): void {
 
             if (channelSettings?.foreignAgentBlurb) {
                 infoMessage += `⚙️ *Настройки канала:*\n`;
-                infoMessage += `🌍 Текст иностранного агента: ${channelSettings.foreignAgentBlurb}\n\n`;
+                infoMessage += `🌍 Текст иностранного агента: ${escapeMarkdown(channelSettings.foreignAgentBlurb)}\n\n`;
             }
 
             const userPermissions = await checkUserChannelPermissions(channelConfig.channelId, userId);

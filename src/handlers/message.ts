@@ -1,7 +1,7 @@
 import * as Sentry from "@sentry/bun";
 import { Keyboard } from "grammy";
 import { bot } from "../config/bot";
-import { formatChannelInfo, checkChannelRequirements, formatChannelRequirements, checkUserChannelPermissions } from "../utils";
+import { formatChannelInfo, checkChannelRequirements, formatChannelRequirements, checkUserChannelPermissions, escapeMarkdown } from "../utils";
 import { getChannelSettings } from "../db/database";
 
 export function registerMessageHandler(): void {
@@ -40,8 +40,7 @@ export function registerMessageHandler(): void {
 
             let errorMessage = `❌ Невозможно опубликовать сообщение: Блурб иностранного агента не настроен для ${formatChannelInfo(channelConfig.channelId, channelConfig.channelTitle)}\n\n`;
             errorMessage += `📋 Требования:\n${formatChannelRequirements(requirements)}\n\n`;
-            // eslint-disable-next-line no-useless-escape
-            errorMessage += `**Следующий шаг:** Используйте \`/set\_fa\_blurb <ваш текст>\` для настройки текста иностранного агента для этого канала.\n\n`;
+            errorMessage += `**Следующий шаг:** Используйте \`${escapeMarkdown("/set_fa_blurb")} <ваш текст>\` для настройки текста иностранного агента для этого канала.\n\n`;
             errorMessage += `Только администраторы канала могут настраивать параметры.`;
 
             return ctx.reply(errorMessage, { parse_mode: "Markdown" });
@@ -51,7 +50,7 @@ export function registerMessageHandler(): void {
 
         if (!messageText || !messageText.includes(foreignAgentBlurb)) {
             let errorMessage = `❌ Невозможно опубликовать сообщение: Ваше сообщение должно содержать текст иностранного агента.\n\n`;
-            errorMessage += `🌍 *Необходимый текст:*\n${foreignAgentBlurb}\n\n`;
+            errorMessage += `🌍 *Необходимый текст:*\n${escapeMarkdown(foreignAgentBlurb)}\n\n`;
             errorMessage += `Пожалуйста, добавьте этот текст к вашему сообщению и повторите попытку.`;
 
             return ctx.reply(errorMessage, { parse_mode: "Markdown" });
