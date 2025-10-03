@@ -50,7 +50,7 @@ export function registerMessageHandler(): void {
 
         if (!messageText || !messageText.includes(foreignAgentBlurb)) {
             let errorMessage = `❌ Невозможно опубликовать сообщение: Ваше сообщение должно содержать текст иностранного агента.\n\n`;
-            errorMessage += `🌍 *Необходимый текст:*\n${escapeMarkdown(foreignAgentBlurb)}\n\n`;
+            errorMessage += `🌍 *Необходимый текст:*\n>${foreignAgentBlurb}\n\n`;
             errorMessage += `Пожалуйста, добавьте этот текст к вашему сообщению и повторите попытку.`;
 
             return ctx.reply(errorMessage, { parse_mode: "Markdown" });

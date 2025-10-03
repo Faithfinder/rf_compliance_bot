@@ -44,7 +44,7 @@ export function registerInfoCommand(): void {
 
             if (channelSettings?.foreignAgentBlurb) {
                 infoMessage += `⚙️ *Настройки канала:*\n`;
-                infoMessage += `🌍 Текст иностранного агента: ${escapeMarkdown(channelSettings.foreignAgentBlurb)}\n\n`;
+                infoMessage += `🌍 *Текст иностранного агента:*\n>${channelSettings.foreignAgentBlurb}\n\n`;
             }
 
             const userPermissions = await checkUserChannelPermissions(channelConfig.channelId, userId);
