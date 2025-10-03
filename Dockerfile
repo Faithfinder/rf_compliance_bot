@@ -12,6 +12,8 @@ COPY src ./src
 
 RUN mkdir -p /app/data && chown -R bun:bun /app/data
 
+VOLUME ["/app/data"]
+
 USER bun
 EXPOSE 3000
 

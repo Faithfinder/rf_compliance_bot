@@ -70,6 +70,26 @@ The bot uses a modular architecture with separate concerns:
 - `NODE_ENV` (optional) - Environment name (development/production)
 - Use `.env` file for local development (copy from `.env.example`)
 
+### Docker Deployment
+
+When deploying with Docker, ensure the `/app/data` directory is mounted as a volume to persist the SQLite database across container restarts:
+
+```bash
+# Using docker run
+docker run -v ./data:/app/data -e TELEGRAM_BOT_TOKEN=your_token your_image
+
+# Using docker-compose
+services:
+  bot:
+    image: your_image
+    volumes:
+      - ./data:/app/data
+    environment:
+      - TELEGRAM_BOT_TOKEN=your_token
+```
+
+The database file `channels.db` will be stored in the mounted volume.
+
 ### Storage System
 
 The bot uses a unified SQLite database for all storage:
