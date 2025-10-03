@@ -64,7 +64,7 @@ async function processChannelSelection(ctx: SessionContext, channelIdentifier: s
         responseText += `\n\n`;
 
         if (!requirements.foreignAgentBlurbConfigured) {
-            responseText += `**Следующий шаг:** Используйте \`${escapeMarkdown("/set_fa_blurb")} <ваш текст>\` для настройки текста иностранного агента. Только администраторы канала могут настраивать параметры.\n\n`;
+            responseText += `*Следующий шаг:* Используйте \`${escapeMarkdown("/set_fa_blurb")} <ваш текст>\` для настройки текста иностранного агента. Только администраторы канала могут настраивать параметры.\n\n`;
         }
 
         const keyboard = new Keyboard()
@@ -77,7 +77,7 @@ async function processChannelSelection(ctx: SessionContext, channelIdentifier: s
             .oneTime();
 
         ctx.session.awaitingChannelSelection = true;
-        await ctx.reply(responseText, { reply_markup: keyboard, parse_mode: "Markdown" });
+        await ctx.reply(responseText, { reply_markup: keyboard, parse_mode: "MarkdownV2" });
     } else {
         responseText += `\n\nОтправьте мне любое сообщение, чтобы проверить его.`;
         await ctx.reply(responseText, { reply_markup: { remove_keyboard: true } });

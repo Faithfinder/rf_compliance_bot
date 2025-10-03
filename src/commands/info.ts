@@ -80,6 +80,6 @@ export function registerInfoCommand(): void {
             }
         }
 
-        return ctx.reply(infoMessage, { parse_mode: "Markdown" });
+        return ctx.reply(infoMessage, { parse_mode: "MarkdownV2" });
     });
 }

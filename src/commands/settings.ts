@@ -39,7 +39,7 @@ export function registerSettingsCommand(): void {
             message += `Чтобы обновить текст иностранного агента, используйте:\n`;
             message += `${escapeMarkdown("/set_fa_blurb")} <ваш текст>`;
 
-            return ctx.reply(message, { parse_mode: "Markdown" });
+            return ctx.reply(message, { parse_mode: "MarkdownV2" });
         }
 
         const permissions = await checkUserChannelPermissions(channelConfig.channelId, userId);
@@ -63,6 +63,6 @@ export function registerSettingsCommand(): void {
         confirmMessage += `📢 *Канал:* ${formatChannelInfo(channelConfig.channelId, channelConfig.channelTitle)}\n\n`;
         confirmMessage += `🌍 *Новый текст иностранного агента:*\n>${newBlurb}`;
 
-        return ctx.reply(confirmMessage, { parse_mode: "Markdown" });
+        return ctx.reply(confirmMessage, { parse_mode: "MarkdownV2" });
     });
 }

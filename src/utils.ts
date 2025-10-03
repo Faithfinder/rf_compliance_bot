@@ -7,12 +7,12 @@ interface ChannelInfo {
 }
 
 /**
- * Escapes special characters in text for Markdown formatting
+ * Escapes special characters in text for MarkdownV2 formatting
  * @param text The text to escape
- * @returns Escaped text safe for Markdown
+ * @returns Escaped text safe for MarkdownV2
  */
 export function escapeMarkdown(text: string): string {
-    return text.replace(/[_*[\]()~`>#+=|{}.!-]/g, "\\$&");
+    return text.replace(/[_*[\]()~`>#+\-=|{}.!\\]/g, "\\$&");
 }
 
 /**
