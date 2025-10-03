@@ -33,7 +33,8 @@ export const commandDefinitions: CommandDefinition[] = [
     {
         command: "setchannel",
         description: "Настроить канал",
-        helpText: "/setchannel <@channel или ID> - Настроить канал для публикации ваших сообщений\nПример: /setchannel @mychannel",
+        helpText:
+            "/setchannel <@channel или ID> - Настроить канал для публикации ваших сообщений\nПример: /setchannel @mychannel",
         register: registerChannelCommands,
     },
     {
@@ -45,7 +46,8 @@ export const commandDefinitions: CommandDefinition[] = [
     {
         command: "set_fa_blurb",
         description: "Настроить текст иностранного агента",
-        helpText: "/set_fa_blurb <текст> - Настроить текст иностранного агента для канала\nПример: /set_fa_blurb Канал признан иностранным агентом",
+        helpText:
+            "/set_fa_blurb <текст> - Настроить текст иностранного агента для канала\nПример: /set_fa_blurb НАСТОЯЩИЙ МАТЕРИАЛ (ИНФОРМАЦИЯ) ПРОИЗВЕДЕН И РАСПРОСТРАНЕН ИНОСТРАННЫМ АГЕНТОМ «ИМЯ АГЕНТА» ЛИБО КАСАЕТСЯ ДЕЯТЕЛЬНОСТИ ИНОСТРАННОГО АГЕНТА «ИМЯ АГЕНТА». 18+",
         register: registerSettingsCommand,
     },
 ];

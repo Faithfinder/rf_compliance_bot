@@ -18,8 +18,13 @@ export async function setBotCommands(): Promise<void> {
         }));
 
         await bot.api.setMyCommands(commands);
-        console.warn("Bot commands menu configured successfully");
+        console.warn(`Bot commands registered: ${commands.length} commands`);
+
+        await bot.api.setChatMenuButton({
+            menu_button: { type: "commands" },
+        });
+        console.warn("Bot menu button configured to show commands");
     } catch (error) {
-        console.warn("Failed to set bot commands:", error);
+        console.warn("Failed to configure bot commands:", error);
     }
 }
