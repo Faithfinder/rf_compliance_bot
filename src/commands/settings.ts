@@ -31,7 +31,7 @@ export function registerSettingsCommand(): void {
             message += `🌍 *Текст иностранного агента:*\n`;
 
             if (channelSettings?.foreignAgentBlurb) {
-                message += `>${channelSettings.foreignAgentBlurb}\n\n`;
+                message += `${escapeMarkdown(channelSettings.foreignAgentBlurb)}\n\n`;
             } else {
                 message += `_Не настроено_\n\n`;
             }
@@ -61,7 +61,7 @@ export function registerSettingsCommand(): void {
 
         let confirmMessage = `✅ Текст иностранного агента успешно обновлен!\n\n`;
         confirmMessage += `📢 *Канал:* ${formatChannelInfo(channelConfig.channelId, channelConfig.channelTitle)}\n\n`;
-        confirmMessage += `🌍 *Новый текст иностранного агента:*\n>${newBlurb}`;
+        confirmMessage += `🌍 *Новый текст иностранного агента:*\n${escapeMarkdown(newBlurb)}`;
 
         return ctx.reply(confirmMessage, { parse_mode: "MarkdownV2" });
     });
