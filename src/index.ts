@@ -2,11 +2,7 @@ import { bot, setBotCommands } from "./config/bot";
 import { initializeSentry, closeSentry } from "./config/sentry";
 import { createSessionMiddleware } from "./config/session";
 import { initializeDatabase, closeDatabase } from "./db/database";
-import { registerStartCommand } from "./commands/start";
-import { registerHelpCommand } from "./commands/help";
-import { registerInfoCommand } from "./commands/info";
-import { registerChannelCommands } from "./commands/channel";
-import { registerSettingsCommand } from "./commands/settings";
+import { commandDefinitions } from "./commands/definitions";
 import { registerMessageHandler } from "./handlers/message";
 import { registerErrorHandler } from "./handlers/error";
 
@@ -15,11 +11,14 @@ initializeDatabase();
 bot.use(createSessionMiddleware());
 await setBotCommands();
 
-registerStartCommand();
-registerHelpCommand();
-registerInfoCommand();
-registerChannelCommands();
-registerSettingsCommand();
+const registeredFunctions = new Set<() => void>();
+for (const cmd of commandDefinitions) {
+    if (!registeredFunctions.has(cmd.register)) {
+        cmd.register();
+        registeredFunctions.add(cmd.register);
+    }
+}
+
 registerMessageHandler();
 registerErrorHandler();
 

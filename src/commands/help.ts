@@ -1,18 +1,11 @@
 import { bot } from "../config/bot";
+import { commandDefinitions } from "./definitions";
 
 export function registerHelpCommand(): void {
     bot.command("help", (ctx) => {
-        const helpMessage = `
-Доступные команды:
+        const commandList = commandDefinitions.map((cmd) => cmd.helpText).join("\n\n");
 
-/start - Запустить бота и показать приветственное сообщение
-/help - Показать это справочное сообщение
-/info - Показать сводку конфигурации бота
-/setchannel <@channel или ID> - Настроить канал для публикации ваших сообщений
-/removechannel - Удалить настройку канала
-
-Пример: /setchannel @mychannel
-    `.trim();
+        const helpMessage = `Доступные команды:\n\n${commandList}`;
 
         return ctx.reply(helpMessage);
     });

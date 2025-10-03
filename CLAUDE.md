@@ -44,8 +44,9 @@ The bot uses a modular architecture with separate concerns:
 - **Database**: [src/db/](src/db/) - SQLite database for shared channel settings
   - `database.ts` - Database initialization and CRUD operations
 - **Commands**: [src/commands/](src/commands/) - command handlers registered via functions
+  - `definitions.ts` - Centralized command definitions (single source of truth for all command metadata)
   - `start.ts` - Welcome message
-  - `help.ts` - Help command
+  - `help.ts` - Help command (dynamically generated from definitions)
   - `info.ts` - Show bot configuration and channel settings
   - `channel.ts` - Channel management (`/setchannel`, `/channelstatus`, `/removechannel`)
   - `settings.ts` - Channel settings management (`/settings`)
@@ -59,7 +60,11 @@ The bot uses a modular architecture with separate concerns:
   - Access the bot API via `bot.api` when needed (e.g., `bot.api.getChat()`, `bot.api.sendMessage()`)
 - **Session middleware**: Uses grammY's session plugin with FileAdapter for per-user state in `data/sessions.json`
 - **SQLite database**: Uses Bun's built-in SQLite for shared channel settings in `data/channels.db`
-- **Registration functions**: All commands and handlers are registered via `register*()` functions called from [src/index.ts](src/index.ts)
+- **Command definitions system**: [src/commands/definitions.ts](src/commands/definitions.ts) contains all command metadata (name, description, help text, registration function) as a single source of truth
+  - Bot menu is automatically generated from definitions in `setBotCommands()` ([src/config/bot.ts](src/config/bot.ts))
+  - `/help` message is automatically generated from definitions ([src/commands/help.ts](src/commands/help.ts))
+  - Commands are registered in [src/index.ts](src/index.ts) by iterating through definitions (with deduplication for shared registration functions)
+- **Registration functions**: All commands and handlers are registered via `register*()` functions
 - **Error handling**: Global error handler in [src/handlers/error.ts](src/handlers/error.ts) captures all bot errors and reports to Sentry with context
 - **Graceful shutdown**: SIGINT/SIGTERM handlers ensure the bot stops cleanly, closes database connection, and flushes Sentry events
 
@@ -160,7 +165,28 @@ The bot uses a unified SQLite database for all storage:
 
 ## Development Notes
 
-- When adding new commands, create a `register*Command()` function in [src/commands/](src/commands/) and call it from [src/index.ts](src/index.ts)
+### Adding New Commands
+
+To add a new command to the bot:
+
+1. **Create the command handler file** in [src/commands/](src/commands/) (e.g., `mycommand.ts`) with a `register*Command()` function
+2. **Add command definition** to [src/commands/definitions.ts](src/commands/definitions.ts):
+   ```typescript
+   {
+       command: "mycommand",
+       description: "Short description for bot menu",
+       helpText: "/mycommand <args> - Detailed help text with usage examples",
+       register: registerMyCommand,
+   }
+   ```
+3. **Import the registration function** in [src/commands/definitions.ts](src/commands/definitions.ts)
+
+That's it! The command will automatically be:
+- Added to the Telegram bot menu
+- Included in the `/help` message
+- Registered when the bot starts
+
+### Other Notes
 - Session data is accessed via `ctx.session` in all command and message handlers (per-user state)
 - Channel settings are accessed via database functions from [src/db/database.ts](src/db/database.ts) (shared state)
 - Key utility functions in [src/utils.ts](src/utils.ts):
