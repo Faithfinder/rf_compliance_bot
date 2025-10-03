@@ -3,12 +3,14 @@ import { registerHelpCommand } from "./help";
 import { registerInfoCommand } from "./info";
 import { registerChannelCommands } from "./channel";
 import { registerSettingsCommand } from "./settings";
+import { isFixedChannelMode } from "../config/environment";
 
 export interface CommandDefinition {
     command: string;
     description: string;
     helpText: string;
     register: () => void;
+    available?: () => boolean;
 }
 
 export const commandDefinitions: CommandDefinition[] = [
@@ -36,12 +38,14 @@ export const commandDefinitions: CommandDefinition[] = [
         helpText:
             "/setchannel <@channel или ID> - Настроить канал для публикации ваших сообщений\nПример: /setchannel @mychannel",
         register: registerChannelCommands,
+        available: () => !isFixedChannelMode(),
     },
     {
         command: "removechannel",
         description: "Удалить настройку канала",
         helpText: "/removechannel - Удалить настройку канала",
         register: () => {}, // Registered together with setchannel
+        available: () => !isFixedChannelMode(),
     },
     {
         command: "set_fa_blurb",

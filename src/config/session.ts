@@ -1,6 +1,7 @@
 import { Context, session, type SessionFlavor } from "grammy";
 import { getDatabase } from "../db/database";
 import { SqliteSessionStorage } from "../db/session-storage";
+import { getFixedChannelId } from "./environment";
 
 export interface ChannelConfig {
     channelId: string;
@@ -19,7 +20,17 @@ export function createSessionMiddleware() {
     const storage = new SqliteSessionStorage<SessionData>(db);
 
     return session({
-        initial: (): SessionData => ({}),
+        initial: (): SessionData => {
+            const fixedChannelId = getFixedChannelId();
+            if (fixedChannelId) {
+                return {
+                    channelConfig: {
+                        channelId: fixedChannelId,
+                    },
+                };
+            }
+            return {};
+        },
         storage,
     });
 }

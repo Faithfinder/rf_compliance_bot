@@ -6,6 +6,7 @@ import {
     checkUserChannelPermissions,
 } from "../utils";
 import { getChannelSettings } from "../db/database";
+import { isFixedChannelMode } from "../config/environment";
 
 export function registerInfoCommand(): void {
     bot.command("info", async (ctx) => {
@@ -26,7 +27,11 @@ export function registerInfoCommand(): void {
 
         if (channelConfig) {
             infoMessage += `📢 *Настроенный канал:*\n`;
-            infoMessage += `${formatChannelInfo(channelConfig.channelId, channelConfig.channelTitle)}\n\n`;
+            infoMessage += `${formatChannelInfo(channelConfig.channelId, channelConfig.channelTitle)}\n`;
+            if (isFixedChannelMode()) {
+                infoMessage += `🔒 Фиксированный канал (установлен администратором)\n`;
+            }
+            infoMessage += `\n`;
 
             const requirements = await checkChannelRequirements(channelConfig.channelId);
 
@@ -62,11 +67,15 @@ export function registerInfoCommand(): void {
                 infoMessage += `\n`;
             }
 
-            infoMessage += `Используйте /removechannel для удаления этой конфигурации`;
+            if (!isFixedChannelMode()) {
+                infoMessage += `Используйте /removechannel для удаления этой конфигурации`;
+            }
         } else {
             infoMessage += `📢 *Настроенный канал:* Нет\n\n`;
             infoMessage += `❌ Канал не настроен\n`;
-            infoMessage += `Используйте /setchannel для настройки`;
+            if (!isFixedChannelMode()) {
+                infoMessage += `Используйте /setchannel для настройки`;
+            }
         }
 
         return ctx.reply(infoMessage, { parse_mode: "Markdown" });

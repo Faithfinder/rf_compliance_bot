@@ -12,10 +12,12 @@ export const bot = new Bot<SessionContext>(BOT_TOKEN);
 
 export async function setBotCommands(): Promise<void> {
     try {
-        const commands = commandDefinitions.map((cmd) => ({
-            command: cmd.command,
-            description: cmd.description,
-        }));
+        const commands = commandDefinitions
+            .filter((cmd) => !cmd.available || cmd.available())
+            .map((cmd) => ({
+                command: cmd.command,
+                description: cmd.description,
+            }));
 
         await bot.api.setMyCommands(commands);
         console.warn(`Bot commands registered: ${commands.length} commands`);

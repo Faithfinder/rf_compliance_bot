@@ -13,9 +13,11 @@ await setBotCommands();
 
 const registeredFunctions = new Set<() => void>();
 for (const cmd of commandDefinitions) {
-    if (!registeredFunctions.has(cmd.register)) {
-        cmd.register();
-        registeredFunctions.add(cmd.register);
+    if (!cmd.available || cmd.available()) {
+        if (!registeredFunctions.has(cmd.register)) {
+            cmd.register();
+            registeredFunctions.add(cmd.register);
+        }
     }
 }
 
