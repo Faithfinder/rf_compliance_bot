@@ -3,7 +3,7 @@ import { getChannelSettings, updateChannelSettings } from "../db/database";
 import { checkUserChannelPermissions, formatChannelInfo } from "../utils";
 
 export function registerSettingsCommand(): void {
-    bot.command("settings", async (ctx) => {
+    bot.command("set_fa_blurb", async (ctx) => {
         const userId = ctx.from?.id;
 
         if (!userId) {
@@ -37,7 +37,7 @@ export function registerSettingsCommand(): void {
             }
 
             message += `Чтобы обновить текст иностранного агента, используйте:\n`;
-            message += `/settings <ваш текст>`;
+            message += `/set_fa_blurb <ваш текст>`;
 
             return ctx.reply(message, { parse_mode: "Markdown" });
         }

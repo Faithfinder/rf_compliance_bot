@@ -1,4 +1,4 @@
-import { bot } from "./config/bot";
+import { bot, setBotCommands } from "./config/bot";
 import { initializeSentry, closeSentry } from "./config/sentry";
 import { createSessionMiddleware } from "./config/session";
 import { initializeDatabase, closeDatabase } from "./db/database";
@@ -13,6 +13,7 @@ import { registerErrorHandler } from "./handlers/error";
 initializeSentry();
 initializeDatabase();
 bot.use(createSessionMiddleware());
+await setBotCommands();
 
 registerStartCommand();
 registerHelpCommand();

@@ -8,3 +8,19 @@ if (!BOT_TOKEN) {
 }
 
 export const bot = new Bot<SessionContext>(BOT_TOKEN);
+
+export async function setBotCommands(): Promise<void> {
+    try {
+        await bot.api.setMyCommands([
+            { command: "start", description: "Запустить бота" },
+            { command: "help", description: "Показать справочное сообщение" },
+            { command: "info", description: "Показать конфигурацию бота" },
+            { command: "setchannel", description: "Настроить канал" },
+            { command: "removechannel", description: "Удалить настройку канала" },
+            { command: "set_fa_blurb", description: "Настроить текст иностранного агента" },
+        ]);
+        console.warn("Bot commands menu configured successfully");
+    } catch (error) {
+        console.warn("Failed to set bot commands:", error);
+    }
+}
