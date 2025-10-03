@@ -8,6 +8,7 @@ import {
     formatChannelRequirements,
     allRequirementsPassed,
     escapeMarkdown,
+    escapeLiteral,
 } from "../utils";
 
 export function showChannelSelectionUI(errorMessage?: string): { text: string; keyboard: Keyboard } {
@@ -19,11 +20,12 @@ export function showChannelSelectionUI(errorMessage?: string): { text: string; k
         .resized()
         .oneTime();
 
-    let text =
-        "Пожалуйста, выберите канал из кнопки ниже или используйте:\n/setchannel <@channel или ID>\n\nПример: /setchannel @mychannel";
+    let text = escapeLiteral(
+        "Пожалуйста, выберите канал из кнопки ниже или используйте:\n/setchannel <@channel или ID>\n\nПример: /setchannel @mychannel"
+    );
 
     if (errorMessage) {
-        text = `❌ ${errorMessage}\n\n${text}`;
+        text = `❌ ${escapeLiteral(errorMessage)}\n\n${text}`;
     }
 
     return { text, keyboard };
@@ -50,21 +52,21 @@ async function processChannelSelection(ctx: SessionContext, channelIdentifier: s
         channelTitle: channelInfo.title,
     };
 
-    await bot.api.editMessageText(chatId, workingMsg.message_id, "Проверка разрешений бота...");
+    await bot.api.editMessageText(chatId, workingMsg.message_id, escapeLiteral("Проверка разрешений бота..."));
 
     const requirements = await checkChannelRequirements(channelInfo.id);
 
     await bot.api.deleteMessage(chatId, workingMsg.message_id).catch(() => {});
 
-    let responseText = `✅ Канал настроен!\n\n`;
-    responseText += `Ваши сообщения теперь будут публиковаться в: ${formatChannelInfo(channelInfo.id, channelInfo.title)}\n\n`;
-    responseText += `📋 Требования:\n${formatChannelRequirements(requirements)}`;
+    let responseText = escapeLiteral(`✅ Канал настроен!\n\n`);
+    responseText += escapeLiteral(`Ваши сообщения теперь будут публиковаться в: `) + `${formatChannelInfo(channelInfo.id, channelInfo.title)}\n\n`;
+    responseText += escapeLiteral(`📋 Требования:\n`) + `${formatChannelRequirements(requirements)}`;
 
     if (!allRequirementsPassed(requirements)) {
         responseText += `\n\n`;
 
         if (!requirements.foreignAgentBlurbConfigured) {
-            responseText += `*Следующий шаг:* Используйте \`${escapeMarkdown("/set_fa_blurb")} <ваш текст>\` для настройки текста иностранного агента. Только администраторы канала могут настраивать параметры.\n\n`;
+            responseText += escapeLiteral(`*Следующий шаг:* Используйте \`${escapeMarkdown("/set_fa_blurb")} <ваш текст>\` для настройки текста иностранного агента. Только администраторы канала могут настраивать параметры.\n\n`);
         }
 
         const keyboard = new Keyboard()
@@ -79,7 +81,7 @@ async function processChannelSelection(ctx: SessionContext, channelIdentifier: s
         ctx.session.awaitingChannelSelection = true;
         await ctx.reply(responseText, { reply_markup: keyboard, parse_mode: "MarkdownV2" });
     } else {
-        responseText += `\n\nОтправьте мне любое сообщение, чтобы проверить его.`;
+        responseText += escapeLiteral(`\n\nОтправьте мне любое сообщение, чтобы проверить его.`);
         await ctx.reply(responseText, { reply_markup: { remove_keyboard: true } });
     }
 }

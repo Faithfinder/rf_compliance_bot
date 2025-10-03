@@ -16,6 +16,17 @@ export function escapeMarkdown(text: string): string {
 }
 
 /**
+ * Escapes MarkdownV2 special characters in literal text while preserving markdown formatting
+ * Use this for static messages where you want to keep bold (*text*), italic, etc.
+ * Only escapes: . - ( ) ! = + { }
+ * @param text The literal text to escape
+ * @returns Text with special chars escaped but markdown preserved
+ */
+export function escapeLiteral(text: string): string {
+    return text.replace(/[.\-()!=+{}]/g, "\\$&");
+}
+
+/**
  * Resolves a channel identifier (handle or ID) to a validated channel info
  * @param identifier Channel handle (e.g., @channelname) or numeric ID (e.g., -1001234567890)
  * @returns Channel info if valid and bot has access, null otherwise
@@ -120,14 +131,13 @@ export async function checkChannelRequirements(channelId: string): Promise<Chann
  */
 export function formatChannelRequirements(requirements: ChannelRequirements): string {
     const lines = [
-        requirements.channelExists ? "✅ Настроенный канал существует" : (
-            "❌ Канал не существует или бот не может получить к нему доступ"
-        ),
-        requirements.botIsAdded ? "✅ 🤖 Бот добавлен в канал" : "❌ 🤖 Бот не добавлен в канал",
-        requirements.botCanPost ? "✅ 🤖 Бот может публиковать сообщения в канал" : "❌ 🤖 Бот не имеет разрешения публиковать сообщения",
+        requirements.channelExists ? escapeLiteral("✅ Настроенный канал существует") :
+            escapeLiteral("❌ Канал не существует или бот не может получить к нему доступ"),
+        requirements.botIsAdded ? escapeLiteral("✅ 🤖 Бот добавлен в канал") : escapeLiteral("❌ 🤖 Бот не добавлен в канал"),
+        requirements.botCanPost ? escapeLiteral("✅ 🤖 Бот может публиковать сообщения в канал") : escapeLiteral("❌ 🤖 Бот не имеет разрешения публиковать сообщения"),
         requirements.foreignAgentBlurbConfigured ?
-            "✅ 🌍 Текст иностранного агента настроен"
-        :   "❌ 🌍 Текст иностранного агента не настроен",
+            escapeLiteral("✅ 🌍 Текст иностранного агента настроен")
+        :   escapeLiteral("❌ 🌍 Текст иностранного агента не настроен"),
     ];
 
     return lines.join("\n");
