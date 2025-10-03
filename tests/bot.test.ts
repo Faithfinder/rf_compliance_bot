@@ -39,10 +39,10 @@ describe("Utility Functions", () => {
         };
 
         const formatted = formatChannelRequirements(requirements);
-        expect(formatted).toContain("✅ Configured channel exists");
-        expect(formatted).toContain("✅ 🤖 Bot is added to the channel");
-        expect(formatted).toContain("✅ 🤖 Bot can post to the channel");
-        expect(formatted).toContain("✅ 🌍 Foreign agent blurb is configured");
+        expect(formatted).toContain("✅ Настроенный канал существует");
+        expect(formatted).toContain("✅ 🤖 Бот добавлен в канал");
+        expect(formatted).toContain("✅ 🤖 Бот может публиковать сообщения в канал");
+        expect(formatted).toContain("✅ 🌍 Текст иностранного агента настроен");
     });
 
     test("should format channel requirements with all checks failed", () => {
@@ -54,10 +54,10 @@ describe("Utility Functions", () => {
         };
 
         const formatted = formatChannelRequirements(requirements);
-        expect(formatted).toContain("❌ Channel doesn't exist or bot cannot access it");
-        expect(formatted).toContain("❌ 🤖 Bot is not added to the channel");
-        expect(formatted).toContain("❌ 🤖 Bot lacks permission to post messages");
-        expect(formatted).toContain("❌ 🌍 Foreign agent blurb is not configured");
+        expect(formatted).toContain("❌ Канал не существует или бот не может получить к нему доступ");
+        expect(formatted).toContain("❌ 🤖 Бот не добавлен в канал");
+        expect(formatted).toContain("❌ 🤖 Бот не имеет разрешения публиковать сообщения");
+        expect(formatted).toContain("❌ 🌍 Текст иностранного агента не настроен");
     });
 
     test("should return true when all requirements are passed", () => {
