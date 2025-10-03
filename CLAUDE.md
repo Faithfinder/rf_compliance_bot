@@ -6,6 +6,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 This is a Telegram bot for RF compliance information built with TypeScript, Bun runtime, and the grammY framework. The bot supports channel posting and user-specific channel configuration with persistent storage.
 
+**Language**: This is a Russian-language bot. All user-facing messages, commands, and responses must be in Russian.
+
 ## Runtime & Package Management
 
 - **Runtime**: Bun (not Node.js) - use `bun` commands for all operations
@@ -70,25 +72,29 @@ The bot uses a modular architecture with separate concerns:
 
 ### Storage System
 
-The bot uses a dual-storage approach:
+The bot uses a unified SQLite database for all storage:
 
 **1. Session Storage (Per-User State)**
-- Uses grammY's session plugin with FileAdapter ([src/config/session.ts](src/config/session.ts))
-- Stores user-specific data in `data/sessions.json`
+- Uses grammY's session plugin with custom `SqliteSessionStorage` adapter ([src/db/session-storage.ts](src/db/session-storage.ts))
+- Stores user-specific data in `sessions` table in `data/channels.db`
 - Session structure:
   - `channelConfig?: { channelId: string; channelTitle?: string }` - User's configured channel
   - `awaitingChannelSelection?: boolean` - UI state flag
 - Accessed via `ctx.session` in all handlers
-- Automatically persisted after each update
+- Automatically persisted after each update via the custom storage adapter
 
 **2. SQLite Database (Shared Channel Settings)**
 - Uses Bun's built-in SQLite ([src/db/database.ts](src/db/database.ts))
-- Stores shared settings for channels in `data/channels.db`
-- Database schema:
-  - `channel_id` (TEXT PRIMARY KEY) - Telegram channel ID
-  - `settings` (TEXT) - JSON blob containing all settings (flexible schema)
-  - `created_at` (INTEGER) - Timestamp
-  - `updated_at` (INTEGER) - Timestamp
+- Single database at `data/channels.db` contains two tables:
+  - `channel_settings` table:
+    - `channel_id` (TEXT PRIMARY KEY) - Telegram channel ID
+    - `settings` (TEXT) - JSON blob containing all settings (flexible schema)
+    - `created_at` (INTEGER) - Timestamp
+    - `updated_at` (INTEGER) - Timestamp
+  - `sessions` table:
+    - `user_id` (TEXT PRIMARY KEY) - Telegram user ID
+    - `data` (TEXT) - JSON blob containing session data
+    - `updated_at` (INTEGER) - Timestamp
 - Settings structure defined via TypeScript interface `ChannelSettingsData`:
   - `foreignAgentBlurb?: string` - Custom foreign agent disclaimer text
   - Additional settings can be easily added to the interface
@@ -107,8 +113,8 @@ The bot uses a dual-storage approach:
 - Coverage configured in [bunfig.toml](bunfig.toml) to output text and lcov formats
 - Current tests:
   - [tests/bot.test.ts](tests/bot.test.ts) - Utility functions
-  - [tests/db.test.ts](tests/db.test.ts) - Database CRUD operations
-- Session-based storage is handled by grammY's middleware; integration tests would be needed for full session testing
+  - [tests/db.test.ts](tests/db.test.ts) - Database CRUD operations for channel settings
+  - [tests/session-storage.test.ts](tests/session-storage.test.ts) - Session storage adapter operations
 
 ## Code Style
 
@@ -137,7 +143,11 @@ The bot uses a dual-storage approach:
 - When adding new commands, create a `register*Command()` function in [src/commands/](src/commands/) and call it from [src/index.ts](src/index.ts)
 - Session data is accessed via `ctx.session` in all command and message handlers (per-user state)
 - Channel settings are accessed via database functions from [src/db/database.ts](src/db/database.ts) (shared state)
-- The channel resolution logic ([src/utils.ts](src/utils.ts) `resolveChannel()`) validates channel access and type (channel/supergroup only)
-- Permission checking for channels happens via `checkUserChannelPermissions()` in [src/utils.ts](src/utils.ts) to verify user's admin status and permissions
+- Key utility functions in [src/utils.ts](src/utils.ts):
+  - `resolveChannel(identifier)` - Validates channel access and type (channel/supergroup only)
+  - `checkUserChannelPermissions(channelId, userId)` - Verifies user's admin status and permissions
+  - `checkChannelRequirements(channelId)` - Checks if channel meets all bot requirements (exists, bot added, bot can post, settings configured)
+  - `formatChannelInfo()`, `formatChannelRequirements()`, `allRequirementsPassed()` - Display formatting utilities
 - All bot errors are automatically captured by Sentry with Telegram context (update_id, user_id, chat_id, message_text)
 - Database is initialized on startup and closed during graceful shutdown
+- Both session and channel settings storage use the same SQLite database instance
