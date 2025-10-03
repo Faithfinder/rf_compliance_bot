@@ -1,7 +1,7 @@
 import * as Sentry from "@sentry/bun";
 import { Keyboard } from "grammy";
 import { bot } from "../config/bot";
-import { formatChannelInfo, checkChannelRequirements, formatChannelRequirements } from "../utils";
+import { formatChannelInfo, checkChannelRequirements, formatChannelRequirements, checkUserChannelPermissions } from "../utils";
 import { getChannelSettings } from "../db/database";
 
 export function registerMessageHandler(): void {
@@ -19,6 +19,16 @@ export function registerMessageHandler(): void {
                 "Вы еще не настроили канал.\n\n" +
                     "Используйте /setchannel <@channel или ID> для настройки.\n" +
                     "Пример: /setchannel @mychannel",
+            );
+        }
+
+        const permissions = await checkUserChannelPermissions(channelConfig.channelId, userId);
+
+        if (!permissions?.canEditMessages) {
+            return ctx.reply(
+                "❌ У вас нет разрешения на публикацию сообщений в этот канал.\n\n" +
+                    "Только администраторы канала с разрешением \"Редактировать сообщения\" могут публиковать сообщения через этого бота.\n\n" +
+                    "Попросите администратора канала предоставить вам это разрешение.",
             );
         }
 
