@@ -64,7 +64,7 @@ export function registerMessageHandler(): void {
 
             await ctx.api.copyMessage(ctx.chat.id, ctx.chat.id, ctx.message.message_id);
 
-            return ctx.reply(errorMessage, { parse_mode: "MarkdownV2" });
+            return await ctx.reply(errorMessage, { parse_mode: "MarkdownV2" });
         }
 
         try {
