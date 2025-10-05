@@ -5,7 +5,6 @@ import {
     formatChannelRequirements,
     checkUserChannelPermissions,
     escapeMarkdown,
-    escapeLiteral,
 } from "../utils";
 import { getChannelSettings } from "../db/database";
 import { isFixedChannelMode } from "../config/environment";
@@ -15,7 +14,7 @@ export function registerInfoCommand(): void {
         const userId = ctx.from?.id;
 
         if (!userId || !ctx.from) {
-            return ctx.reply(escapeLiteral("Не удается идентифицировать пользователя."));
+            return ctx.reply("Не удается идентифицировать пользователя\\.");
         }
 
         const channelConfig = ctx.session.channelConfig;
@@ -32,7 +31,7 @@ export function registerInfoCommand(): void {
             const channelTitle = channelConfig.channelTitle ? escapeMarkdown(channelConfig.channelTitle) : undefined;
             infoMessage += `${channelTitle ? `${channelTitle} (\`${channelConfig.channelId}\`)` : channelConfig.channelId}\n`;
             if (isFixedChannelMode()) {
-                infoMessage += escapeLiteral(`🔒 Фиксированный канал (установлен администратором)\n`);
+                infoMessage += `🔒 Фиксированный канал \\(установлен администратором\\)\n`;
             }
             infoMessage += `\n`;
 
@@ -61,7 +60,7 @@ export function registerInfoCommand(): void {
 
                 if (userPermissions.isAdmin) {
                     infoMessage += `✅ Администратор\n`;
-                    if (userPermissions.canPostMessages) infoMessage += escapeLiteral(`⚠️ Может публиковать сообщения (Это право следует убрать чтобы предотвратить обход бота)\n`);
+                    if (userPermissions.canPostMessages) infoMessage += `⚠️ Может публиковать сообщения \\(Это право следует убрать чтобы предотвратить обход бота\\)\n`;
                     if (userPermissions.canEditMessages) infoMessage += `✅ Может редактировать сообщения\n`;
                     if (userPermissions.canManageChat) infoMessage += `✅ Может управлять чатом\n`;
                 } else {
