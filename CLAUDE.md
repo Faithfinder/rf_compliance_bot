@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is a Telegram bot for RF compliance information built with TypeScript, Bun runtime, and the grammY framework. The bot supports channel posting and user-specific channel configuration with persistent storage.
+This is a Telegram bot aiming to help users make sure they don't miss adding compliance text to their messages. It's built with TypeScript, Bun runtime, and the grammY framework. The bot supports channel posting and user-specific channel configuration with persistent storage.
 
 **Language**: This is a Russian-language bot. All user-facing messages, commands, and responses must be in Russian.
 
@@ -100,6 +100,7 @@ The database file `channels.db` will be stored in the mounted volume.
 The bot uses a unified SQLite database for all storage:
 
 **1. Session Storage (Per-User State)**
+
 - Uses grammY's session plugin with custom `SqliteSessionStorage` adapter ([src/db/session-storage.ts](src/db/session-storage.ts))
 - Stores user-specific data in `sessions` table in `data/channels.db`
 - Session structure:
@@ -109,6 +110,7 @@ The bot uses a unified SQLite database for all storage:
 - Automatically persisted after each update via the custom storage adapter
 
 **2. SQLite Database (Shared Channel Settings)**
+
 - Uses Bun's built-in SQLite ([src/db/database.ts](src/db/database.ts))
 - Single database at `data/channels.db` contains two tables:
   - `channel_settings` table:
@@ -171,6 +173,7 @@ To add a new command to the bot:
 
 1. **Create the command handler file** in [src/commands/](src/commands/) (e.g., `mycommand.ts`) with a `register*Command()` function
 2. **Add command definition** to [src/commands/definitions.ts](src/commands/definitions.ts):
+
    ```typescript
    {
        command: "mycommand",
@@ -179,14 +182,17 @@ To add a new command to the bot:
        register: registerMyCommand,
    }
    ```
+
 3. **Import the registration function** in [src/commands/definitions.ts](src/commands/definitions.ts)
 
 That's it! The command will automatically be:
+
 - Added to the Telegram bot menu
 - Included in the `/help` message
 - Registered when the bot starts
 
 ### Other Notes
+
 - Session data is accessed via `ctx.session` in all command and message handlers (per-user state)
 - Channel settings are accessed via database functions from [src/db/database.ts](src/db/database.ts) (shared state)
 - Key utility functions in [src/utils.ts](src/utils.ts):
