@@ -19,7 +19,9 @@ export async function setBotCommands(): Promise<void> {
                 description: cmd.description,
             }));
 
-        await bot.api.setMyCommands(commands);
+        await bot.api.setMyCommands(commands, {
+            scope: { type: "all_private_chats" },
+        });
         console.warn(`Bot commands registered: ${commands.length} commands`);
 
         await bot.api.setChatMenuButton({

@@ -1,11 +1,17 @@
 import * as Sentry from "@sentry/bun";
 import { Keyboard } from "grammy";
 import { bot } from "../config/bot";
-import { formatChannelInfo, checkChannelRequirements, formatChannelRequirements, checkUserChannelPermissions, escapeMarkdown } from "../utils";
+import {
+    formatChannelInfo,
+    checkChannelRequirements,
+    formatChannelRequirements,
+    checkUserChannelPermissions,
+    escapeMarkdown,
+} from "../utils";
 import { getChannelSettings } from "../db/database";
 
 export function registerMessageHandler(): void {
-    bot.on("message", async (ctx) => {
+    bot.chatType("private").on("message", async (ctx) => {
         const userId = ctx.from?.id;
 
         if (!userId) {
@@ -38,7 +44,9 @@ export function registerMessageHandler(): void {
         if (!foreignAgentBlurb) {
             const requirements = await checkChannelRequirements(channelConfig.channelId);
 
-            let errorMessage = `❌ Невозможно опубликовать сообщение: Блурб иностранного агента не настроен для ` + `${formatChannelInfo(channelConfig.channelId, channelConfig.channelTitle)}\n\n`;
+            let errorMessage =
+                `❌ Невозможно опубликовать сообщение: Блурб иностранного агента не настроен для ` +
+                `${formatChannelInfo(channelConfig.channelId, channelConfig.channelTitle)}\n\n`;
             errorMessage += `📋 Требования:\n` + `${formatChannelRequirements(requirements)}\n\n`;
             errorMessage += `*Следующий шаг:* Используйте \`${escapeMarkdown("/set_fa_blurb")} <ваш текст>\` для настройки текста иностранного агента для этого канала\\.\n\n`;
             errorMessage += `Только администраторы канала могут настраивать параметры\\.`;
@@ -52,7 +60,7 @@ export function registerMessageHandler(): void {
             let errorMessage = `❌ Невозможно опубликовать сообщение: Ваше сообщение должно содержать текст иностранного агента\\.\n\n`;
             errorMessage += `🌍 *Необходимый текст:*\n` + `${escapeMarkdown(foreignAgentBlurb)}\n\n`;
             errorMessage += `Пожалуйста\\, добавьте этот текст к вашему сообщению и повторите попытку\\.\n`;
-            errorMessage += `Оригинальное сообщение:`
+            errorMessage += `Оригинальное сообщение:`;
 
             await ctx.api.copyMessage(ctx.chat.id, ctx.chat.id, ctx.message.message_id);
 
@@ -80,7 +88,9 @@ export function registerMessageHandler(): void {
 
             const requirements = await checkChannelRequirements(channelConfig.channelId);
 
-            let errorMessage = `❌ Не удалось опубликовать сообщение в ` + `${formatChannelInfo(channelConfig.channelId, channelConfig.channelTitle)}\n\n`;
+            let errorMessage =
+                `❌ Не удалось опубликовать сообщение в ` +
+                `${formatChannelInfo(channelConfig.channelId, channelConfig.channelTitle)}\n\n`;
             errorMessage += `📋 Требования:\n` + `${formatChannelRequirements(requirements)}\n\n`;
 
             if (!requirements.channelExists) {
