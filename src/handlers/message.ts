@@ -51,7 +51,10 @@ export function registerMessageHandler(): void {
         if (!messageText || !messageText.includes(foreignAgentBlurb)) {
             let errorMessage = `❌ Невозможно опубликовать сообщение: Ваше сообщение должно содержать текст иностранного агента\\.\n\n`;
             errorMessage += `🌍 *Необходимый текст:*\n` + `${escapeMarkdown(foreignAgentBlurb)}\n\n`;
-            errorMessage += `Пожалуйста\\, добавьте этот текст к вашему сообщению и повторите попытку\\.`;
+            errorMessage += `Пожалуйста\\, добавьте этот текст к вашему сообщению и повторите попытку\\.\n`;
+            errorMessage += `Оригинальное сообщение:`
+
+            await ctx.api.copyMessage(ctx.chat.id, ctx.chat.id, ctx.message.message_id);
 
             return ctx.reply(errorMessage, { parse_mode: "MarkdownV2" });
         }
