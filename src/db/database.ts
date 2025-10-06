@@ -3,6 +3,7 @@ import { join } from "path";
 
 export interface ChannelSettingsData {
     foreignAgentBlurb?: string;
+    notificationUserIds?: number[];
 }
 
 export interface ChannelSettings {
@@ -105,4 +106,33 @@ export function deleteChannelSettings(channelId: string): void {
 
     const deleteQuery = database.query("DELETE FROM channel_settings WHERE channel_id = ?");
     deleteQuery.run(channelId);
+}
+
+export function addNotificationUser(channelId: string, userId: number): void {
+    const settings = getChannelSettings(channelId);
+    const currentUserIds = settings?.notificationUserIds || [];
+
+    if (currentUserIds.includes(userId)) {
+        return;
+    }
+
+    updateChannelSettings(channelId, {
+        notificationUserIds: [...currentUserIds, userId],
+    });
+}
+
+export function removeNotificationUser(channelId: string, userId: number): void {
+    const settings = getChannelSettings(channelId);
+    const currentUserIds = settings?.notificationUserIds || [];
+
+    const updatedUserIds = currentUserIds.filter((id) => id !== userId);
+
+    updateChannelSettings(channelId, {
+        notificationUserIds: updatedUserIds,
+    });
+}
+
+export function getNotificationUsers(channelId: string): number[] {
+    const settings = getChannelSettings(channelId);
+    return settings?.notificationUserIds || [];
 }

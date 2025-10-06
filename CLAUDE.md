@@ -49,8 +49,9 @@ The bot uses a modular architecture with separate concerns:
   - `help.ts` - Help command (dynamically generated from definitions)
   - `info.ts` - Show bot configuration and channel settings
   - `channel.ts` - Channel management (`/setchannel`, `/channelstatus`, `/removechannel`)
-  - `settings.ts` - Channel settings management (`/settings`)
-- **Handlers**: [src/handlers/](src/handlers/) - generic message handling and error handling
+  - `settings.ts` - Channel settings management (`/set_fa_blurb`)
+  - `notifications.ts` - Notification management (`/notify_add`, `/notify_remove`, `/notify_list`)
+- **Handlers**: [src/handlers/](src/handlers/) - generic message handling, error handling, and rejection notifications
 - **Utilities**: [src/utils.ts](src/utils.ts) - channel resolution and formatting utilities
 
 ### Key Patterns
@@ -105,7 +106,8 @@ The bot uses a unified SQLite database for all storage:
 - Stores user-specific data in `sessions` table in `data/channels.db`
 - Session structure:
   - `channelConfig?: { channelId: string; channelTitle?: string }` - User's configured channel
-  - `awaitingChannelSelection?: boolean` - UI state flag
+  - `awaitingChannelSelection?: boolean` - UI state flag for channel selection
+  - `awaitingNotificationUserSelection?: "add" | "remove"` - UI state flag for notification user selection
 - Accessed via `ctx.session` in all handlers
 - Automatically persisted after each update via the custom storage adapter
 
@@ -124,14 +126,18 @@ The bot uses a unified SQLite database for all storage:
     - `updated_at` (INTEGER) - Timestamp
 - Settings structure defined via TypeScript interface `ChannelSettingsData`:
   - `foreignAgentBlurb?: string` - Custom foreign agent disclaimer text
+  - `notificationUserIds?: number[]` - List of admin user IDs to notify when messages are rejected
   - Additional settings can be easily added to the interface
 - Uses JSON storage for maximum flexibility - new settings can be added without schema migrations
 - Shared settings accessible to all users of the same channel
-- Only channel administrators can modify settings via `/settings` command
+- Only channel administrators can modify settings via `/set_fa_blurb` command
 - Database functions:
   - `getChannelSettings(channelId)` - Retrieve settings for a channel
   - `updateChannelSettings(channelId, settings)` - Update/merge settings (partial updates supported)
   - `deleteChannelSettings(channelId)` - Remove all settings for a channel
+  - `addNotificationUser(channelId, userId)` - Add a user to the notification list
+  - `removeNotificationUser(channelId, userId)` - Remove a user from the notification list
+  - `getNotificationUsers(channelId)` - Get list of notification users for a channel
 
 ### Testing
 
@@ -197,9 +203,18 @@ That's it! The command will automatically be:
 - Channel settings are accessed via database functions from [src/db/database.ts](src/db/database.ts) (shared state)
 - Key utility functions in [src/utils.ts](src/utils.ts):
   - `resolveChannel(identifier)` - Validates channel access and type (channel/supergroup only)
+  - `resolveUserIdentifier(identifier, channelId)` - Resolves numeric user ID to user info by looking them up in the channel (username lookups not supported by Telegram Bot API)
   - `checkUserChannelPermissions(channelId, userId)` - Verifies user's admin status and permissions
   - `checkChannelRequirements(channelId)` - Checks if channel meets all bot requirements (exists, bot added, bot can post, settings configured)
   - `formatChannelInfo()`, `formatChannelRequirements()`, `allRequirementsPassed()` - Display formatting utilities
+- Rejection notifications are sent automatically when a user's message is rejected for missing foreign agent text
+  - Configured via `/notify_add`, `/notify_remove`, and `/notify_list` commands
+  - Only channel administrators with `canManageChat` permission can manage the notification list
+  - Commands support both manual user ID input and interactive keyboard-based user selection
+  - When called without arguments, `/notify_add` and `/notify_remove` show a custom keyboard to select users
+  - User selection is handled via `message:users_shared` event with session state tracking
+  - Notifications are sent as private messages to subscribed administrators
+  - Includes details: channel, user info, message preview, timestamp, and rejection reason
 - All bot errors are automatically captured by Sentry with Telegram context (update_id, user_id, chat_id, message_text)
 - Database is initialized on startup and closed during graceful shutdown
 - Both session and channel settings storage use the same SQLite database instance

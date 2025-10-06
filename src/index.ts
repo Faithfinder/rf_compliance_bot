@@ -3,6 +3,7 @@ import { initializeSentry, closeSentry } from "./config/sentry";
 import { createSessionMiddleware } from "./config/session";
 import { initializeDatabase, closeDatabase } from "./db/database";
 import { commandDefinitions } from "./commands/definitions";
+import { registerNotificationUserSelectionHandler } from "./commands/notifications";
 import { registerMessageHandler } from "./handlers/message";
 import { registerErrorHandler } from "./handlers/error";
 
@@ -22,6 +23,7 @@ for (const cmd of commandDefinitions) {
 }
 
 registerMessageHandler();
+registerNotificationUserSelectionHandler();
 registerErrorHandler();
 
 const gracefulShutdown = async (signal: string) => {

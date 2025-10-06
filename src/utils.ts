@@ -209,3 +209,51 @@ export async function checkUserChannelPermissions(
         return null;
     }
 }
+
+export interface UserInfo {
+    id: number;
+    firstName: string;
+    lastName?: string;
+    username?: string;
+}
+
+/**
+ * Resolves a user identifier (numeric ID) to user info by looking them up in a channel
+ * Note: Only supports numeric user IDs. Telegram Bot API doesn't support username lookups.
+ * @param identifier Numeric user ID
+ * @param channelId Channel ID to look up the user in
+ * @returns User info if found, null otherwise
+ */
+export async function resolveUserIdentifier(
+    identifier: string,
+    channelId: string,
+): Promise<UserInfo | null> {
+    try {
+        const trimmed = identifier.trim();
+
+        if (!trimmed) {
+            return null;
+        }
+
+        const isNumericId = /^\d+$/.test(trimmed);
+
+        if (!isNumericId) {
+            return null;
+        }
+
+        const userId = parseInt(trimmed, 10);
+
+        const chatMember = await bot.api.getChatMember(channelId, userId);
+        const user = chatMember.user;
+
+        return {
+            id: user.id,
+            firstName: user.first_name,
+            lastName: user.last_name,
+            username: user.username,
+        };
+    } catch (error) {
+        console.error("Error resolving user identifier:", error);
+        return null;
+    }
+}

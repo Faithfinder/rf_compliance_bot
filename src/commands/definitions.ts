@@ -3,6 +3,7 @@ import { registerHelpCommand } from "./help";
 import { registerInfoCommand } from "./info";
 import { registerChannelCommands } from "./channel";
 import { registerSettingsCommand } from "./settings";
+import { registerNotificationCommands } from "./notifications";
 import { isFixedChannelMode } from "../config/environment";
 import { escapeMarkdown } from "../utils";
 
@@ -54,5 +55,25 @@ export const commandDefinitions: CommandDefinition[] = [
         helpText:
             `${escapeMarkdown("/set_fa_blurb")} <текст> - Настроить текст иностранного агента для канала\nПример: ${escapeMarkdown("/set_fa_blurb")} НАСТОЯЩИЙ МАТЕРИАЛ (ИНФОРМАЦИЯ) ПРОИЗВЕДЕН И РАСПРОСТРАНЕН ИНОСТРАННЫМ АГЕНТОМ «ИМЯ АГЕНТА» ЛИБО КАСАЕТСЯ ДЕЯТЕЛЬНОСТИ ИНОСТРАННОГО АГЕНТА «ИМЯ АГЕНТА». 18+`,
         register: registerSettingsCommand,
+    },
+    {
+        command: "notify_add",
+        description: "Добавить получателя уведомлений",
+        helpText:
+            `${escapeMarkdown("/notify_add")} \\[ID\\] - Добавить администратора в список получателей уведомлений об отклоненных сообщениях\nПример: ${escapeMarkdown("/notify_add")} 123456789\nИли используйте команду без параметров для выбора через кнопку`,
+        register: registerNotificationCommands,
+    },
+    {
+        command: "notify_remove",
+        description: "Удалить получателя уведомлений",
+        helpText:
+            `${escapeMarkdown("/notify_remove")} \\[ID\\] - Удалить администратора из списка получателей уведомлений\nПример: ${escapeMarkdown("/notify_remove")} 123456789\nИли используйте команду без параметров для выбора через кнопку`,
+        register: () => {},
+    },
+    {
+        command: "notify_list",
+        description: "Показать список получателей уведомлений",
+        helpText: `${escapeMarkdown("/notify_list")} - Показать список администраторов\\, получающих уведомления об отклоненных сообщениях`,
+        register: () => {},
     },
 ];

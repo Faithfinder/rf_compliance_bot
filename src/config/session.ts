@@ -11,6 +11,7 @@ export interface ChannelConfig {
 export interface SessionData {
     channelConfig?: ChannelConfig;
     awaitingChannelSelection?: boolean;
+    awaitingNotificationUserSelection?: "add" | "remove";
 }
 
 export type SessionContext = Context & SessionFlavor<SessionData>;

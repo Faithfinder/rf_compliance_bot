@@ -1,6 +1,5 @@
 import { bot } from "../config/bot";
 import {
-    formatChannelInfo,
     checkChannelRequirements,
     formatChannelRequirements,
     checkUserChannelPermissions,

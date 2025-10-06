@@ -8,7 +8,69 @@ import {
     checkUserChannelPermissions,
     escapeMarkdown,
 } from "../utils";
-import { getChannelSettings } from "../db/database";
+import { getChannelSettings, getNotificationUsers } from "../db/database";
+
+async function sendRejectionNotification(
+    channelId: string,
+    channelTitle: string | undefined,
+    rejectedUserId: number,
+    rejectedUserFirstName: string,
+    rejectedUserHandle: string | undefined,
+    rejectedMessageChatId: number,
+    rejectedMessageId: number,
+): Promise<void> {
+    const notificationUserIds = getNotificationUsers(channelId);
+
+    if (notificationUserIds.length === 0) {
+        return;
+    }
+
+    const timestamp = new Date().toLocaleString("ru-RU", {
+        timeZone: "Europe/Moscow",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+    });
+
+    let notificationMessage = `🚫 *Сообщение отклонено*\n\n`;
+    notificationMessage += `📢 *Канал:* ${formatChannelInfo(channelId, channelTitle)}\n`;
+    notificationMessage += `👤 *Пользователь:* ${escapeMarkdown(rejectedUserFirstName)}`;
+    if (rejectedUserHandle) {
+        notificationMessage += ` (@${escapeMarkdown(rejectedUserHandle)})`;
+    }
+    notificationMessage += `\n🆔 *ID:* \`${rejectedUserId}\`\n`;
+    notificationMessage += `🕐 *Время:* ${escapeMarkdown(timestamp)}\n\n`;
+    notificationMessage += `❌ *Причина:* Отсутствует текст иностранного агента\n\n`;
+    notificationMessage += `📝 *Отклоненное сообщение:*`;
+
+    for (const notifyUserId of notificationUserIds) {
+        try {
+            await bot.api.sendMessage(notifyUserId, notificationMessage, {
+                parse_mode: "MarkdownV2",
+            });
+
+            await bot.api.copyMessage(
+                notifyUserId,
+                rejectedMessageChatId,
+                rejectedMessageId,
+            );
+        } catch (error) {
+            console.error(`Failed to send notification to user ${notifyUserId}:`, error);
+
+            Sentry.withScope((scope) => {
+                scope.setContext("notification_failure", {
+                    channel_id: channelId,
+                    notify_user_id: notifyUserId,
+                    rejected_user_id: rejectedUserId,
+                });
+                scope.setTag("error_type", "notification_send_failed");
+                Sentry.captureException(error);
+            });
+        }
+    }
+}
 
 export function registerMessageHandler(): void {
     bot.chatType("private").on("message", async (ctx) => {
@@ -57,6 +119,16 @@ export function registerMessageHandler(): void {
         const messageText = ctx.message.text || ctx.message.caption;
 
         if (!messageText || !messageText.includes(foreignAgentBlurb)) {
+            await sendRejectionNotification(
+                channelConfig.channelId,
+                channelConfig.channelTitle,
+                userId,
+                ctx.from.first_name,
+                ctx.from.username,
+                ctx.chat.id,
+                ctx.message.message_id,
+            );
+
             let errorMessage = `❌ Невозможно опубликовать сообщение: Ваше сообщение должно содержать текст иностранного агента\\.\n\n`;
             errorMessage += `🌍 *Необходимый текст:*\n` + `${escapeMarkdown(foreignAgentBlurb)}\n\n`;
             errorMessage += `Пожалуйста\\, добавьте этот текст к вашему сообщению и повторите попытку\\.\n`;
