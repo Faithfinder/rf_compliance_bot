@@ -57,7 +57,8 @@ async function processChannelSelection(ctx: SessionContext, channelIdentifier: s
     await bot.api.deleteMessage(chatId, workingMsg.message_id).catch(() => {});
 
     let responseText = `✅ Канал настроен!\n\n`;
-    responseText += `Ваши сообщения теперь будут публиковаться в: ` + `${formatChannelInfo(channelInfo.id, channelInfo.title)}\n\n`;
+    responseText +=
+        `Ваши сообщения теперь будут публиковаться в: ` + `${formatChannelInfo(channelInfo.id, channelInfo.title)}\n\n`;
     responseText += `📋 Требования:\n` + `${formatChannelRequirements(requirements)}`;
 
     if (!allRequirementsPassed(requirements)) {
@@ -80,7 +81,7 @@ async function processChannelSelection(ctx: SessionContext, channelIdentifier: s
         await ctx.reply(responseText, { reply_markup: keyboard, parse_mode: "MarkdownV2" });
     } else {
         responseText += `\n\nОтправьте мне любое сообщение\\, чтобы проверить его\\.`;
-        await ctx.reply(responseText, { reply_markup: { remove_keyboard: true } });
+        await ctx.reply(responseText, { reply_markup: { remove_keyboard: true }, parse_mode: "MarkdownV2" });
     }
 }
 

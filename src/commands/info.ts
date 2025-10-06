@@ -59,7 +59,8 @@ export function registerInfoCommand(): void {
 
                 if (userPermissions.isAdmin) {
                     infoMessage += `✅ Администратор\n`;
-                    if (userPermissions.canPostMessages) infoMessage += `⚠️ Может публиковать сообщения \\(Это право следует убрать чтобы предотвратить обход бота\\)\n`;
+                    if (userPermissions.canPostMessages)
+                        infoMessage += `⚠️ Может публиковать сообщения \\(Это право следует убрать\\, чтобы предотвратить обход бота\\)\n`;
                     if (userPermissions.canEditMessages) infoMessage += `✅ Может редактировать сообщения\n`;
                     if (userPermissions.canManageChat) infoMessage += `✅ Может управлять чатом\n`;
                 } else {

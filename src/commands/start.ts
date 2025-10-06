@@ -28,7 +28,8 @@ export function registerStartCommand(): void {
         );
 
         return ctx.reply(
-            `${welcomeMessage}\n\n✅ Ваш канал настроен: ${channelInfo}\n\nИспользуйте /help для просмотра доступных команд.`,
+            `${welcomeMessage}\n\n✅ Ваш канал настроен: ${channelInfo}\n\nИспользуйте /help для просмотра доступных команд\\.`,
+            { parse_mode: "MarkdownV2" },
         );
     });
 }

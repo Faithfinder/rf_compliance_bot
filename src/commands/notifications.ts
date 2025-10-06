@@ -2,7 +2,7 @@ import { Keyboard } from "grammy";
 import { bot } from "../config/bot";
 import type { SessionContext } from "../config/session";
 import { addNotificationUser, removeNotificationUser, getNotificationUsers } from "../db/database";
-import { checkUserChannelPermissions, formatChannelInfo, resolveUserIdentifier } from "../utils";
+import { checkUserChannelPermissions, formatChannelInfo, resolveUserIdentifier, escapeMarkdown } from "../utils";
 
 interface ValidationResult {
     success: boolean;
@@ -160,9 +160,9 @@ export function registerNotificationCommands(): void {
                 try {
                     const chatMember = await bot.api.getChatMember(validation.channelId, targetUserId);
                     const user = chatMember.user;
-                    message += `• ${user.first_name}`;
+                    message += `• ${escapeMarkdown(user.first_name)}`;
                     if (user.username) {
-                        message += ` (@${user.username})`;
+                        message += ` (@${escapeMarkdown(user.username)})`;
                     }
                     message += ` \\[${targetUserId}\\]\n`;
                 } catch {
@@ -173,7 +173,7 @@ export function registerNotificationCommands(): void {
             message += `\n*Всего:* ${notificationUserIds.length}`;
         }
 
-        return ctx.reply(message);
+        return ctx.reply(message, { parse_mode: "MarkdownV2" });
     });
 }
 

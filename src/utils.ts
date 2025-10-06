@@ -15,7 +15,6 @@ export function escapeMarkdown(text: string): string {
     return text.replace(/[_*[\]()~`>#+\-=|{}.!\\]/g, "\\$&");
 }
 
-
 /**
  * Resolves a channel identifier (handle or ID) to a validated channel info
  * @param identifier Channel handle (e.g., @channelname) or numeric ID (e.g., -1001234567890)
@@ -121,10 +120,13 @@ export async function checkChannelRequirements(channelId: string): Promise<Chann
  */
 export function formatChannelRequirements(requirements: ChannelRequirements): string {
     const lines = [
-        requirements.channelExists ? "✅ Настроенный канал существует" :
-            "❌ Канал не существует или бот не может получить к нему доступ",
+        requirements.channelExists ?
+            "✅ Настроенный канал существует"
+        :   "❌ Канал не существует или бот не может получить к нему доступ",
         requirements.botIsAdded ? "✅ 🤖 Бот добавлен в канал" : "❌ 🤖 Бот не добавлен в канал",
-        requirements.botCanPost ? "✅ 🤖 Бот может публиковать сообщения в канал" : "❌ 🤖 Бот не имеет разрешения публиковать сообщения",
+        requirements.botCanPost ?
+            "✅ 🤖 Бот может публиковать сообщения в канал"
+        :   "❌ 🤖 Бот не имеет разрешения публиковать сообщения",
         requirements.foreignAgentBlurbConfigured ?
             "✅ 🌍 Текст иностранного агента настроен"
         :   "❌ 🌍 Текст иностранного агента не настроен",
@@ -224,10 +226,7 @@ export interface UserInfo {
  * @param channelId Channel ID to look up the user in
  * @returns User info if found, null otherwise
  */
-export async function resolveUserIdentifier(
-    identifier: string,
-    channelId: string,
-): Promise<UserInfo | null> {
+export async function resolveUserIdentifier(identifier: string, channelId: string): Promise<UserInfo | null> {
     try {
         const trimmed = identifier.trim();
 

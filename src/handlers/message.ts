@@ -51,11 +51,7 @@ async function sendRejectionNotification(
                 parse_mode: "MarkdownV2",
             });
 
-            await bot.api.copyMessage(
-                notifyUserId,
-                rejectedMessageChatId,
-                rejectedMessageId,
-            );
+            await bot.api.copyMessage(notifyUserId, rejectedMessageChatId, rejectedMessageId);
         } catch (error) {
             console.error(`Failed to send notification to user ${notifyUserId}:`, error);
 
@@ -144,6 +140,7 @@ export function registerMessageHandler(): void {
 
             return ctx.reply(
                 `✅ Сообщение опубликовано в ` + formatChannelInfo(channelConfig.channelId, channelConfig.channelTitle),
+                { parse_mode: "MarkdownV2" },
             );
         } catch (error) {
             console.error("Error posting to channel:", error);
@@ -179,7 +176,7 @@ export function registerMessageHandler(): void {
                     .oneTime();
 
                 ctx.session.awaitingChannelSelection = true;
-                return ctx.reply(errorMessage, { reply_markup: keyboard });
+                return ctx.reply(errorMessage, { reply_markup: keyboard, parse_mode: "MarkdownV2" });
             } else if (!requirements.botIsAdded) {
                 errorMessage +=
                     "*Следующий шаг:* Попросите администратора канала добавить этого бота в качестве администратора в канал\\.";
@@ -190,7 +187,7 @@ export function registerMessageHandler(): void {
 
             errorMessage += "\n\nИли используйте /setchannel для настройки другого канала";
 
-            return ctx.reply(errorMessage);
+            return ctx.reply(errorMessage, { parse_mode: "MarkdownV2" });
         }
     });
 }
