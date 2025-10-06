@@ -38,7 +38,7 @@ async function sendRejectionNotification(
     notificationMessage += `📢 *Канал:* ${formatChannelInfo(channelId, channelTitle)}\n`;
     notificationMessage += `👤 *Пользователь:* ${escapeMarkdown(rejectedUserFirstName)}`;
     if (rejectedUserHandle) {
-        notificationMessage += ` (@${escapeMarkdown(rejectedUserHandle)})`;
+        notificationMessage += ` \\(@${escapeMarkdown(rejectedUserHandle)}\\)`;
     }
     notificationMessage += `\n🆔 *ID:* \`${rejectedUserId}\`\n`;
     notificationMessage += `🕐 *Время:* ${escapeMarkdown(timestamp)}\n\n`;
