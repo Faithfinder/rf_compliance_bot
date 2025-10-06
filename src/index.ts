@@ -22,8 +22,8 @@ for (const cmd of commandDefinitions) {
     }
 }
 
-registerMessageHandler();
 registerNotificationUserSelectionHandler();
+registerMessageHandler();
 registerErrorHandler();
 
 const gracefulShutdown = async (signal: string) => {
