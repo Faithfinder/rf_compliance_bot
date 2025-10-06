@@ -112,8 +112,7 @@ async function handleUserSelection(
         const preposition = operation === "add" ? "в" : "из";
 
         return ctx.reply(
-            `👤 Пожалуйста\\, выберите администратора для ${action} ${preposition} списка уведомлений\\.\n\n` +
-                `Или используйте: /notify\\_${operation} <числовой ID>`,
+            `👤 Пожалуйста\\, выберите администратора для ${action} ${preposition} списка уведомлений\\.`,
             { reply_markup: keyboard },
         );
     }
@@ -122,10 +121,7 @@ async function handleUserSelection(
     const targetUser = await resolveUserIdentifier(targetIdentifier, channelId);
 
     if (!targetUser) {
-        return ctx.reply(
-            "❌ Не удалось найти пользователя\\. Убедитесь\\, что вы указали правильный числовой ID пользователя\\.\n\n" +
-                "Примечание: Поддерживаются только числовые ID\\. Используйте кнопку выбора для удобства\\.",
-        );
+        return ctx.reply("❌ Не удалось найти пользователя\\. Убедитесь\\, что вы указали правильный числовой ID\\.");
     }
 
     return processUserOperation(ctx, channelId, channelTitle, targetUser.id, operation);
@@ -156,7 +152,7 @@ export function registerNotificationCommands(): void {
         message += `📢 *Канал:* ${formatChannelInfo(validation.channelId, validation.channelTitle)}\n\n`;
 
         if (notificationUserIds.length === 0) {
-            message += `Список пуст\\. Используйте /notify\\_add для добавления пользователей\\.`;
+            message += `Список пуст\\. Используйте /notify\\_add для добавления администраторов\\.`;
         } else {
             message += `👥 *Подписчики на уведомления:*\n`;
 

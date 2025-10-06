@@ -60,14 +60,14 @@ export const commandDefinitions: CommandDefinition[] = [
         command: "notify_add",
         description: "Добавить получателя уведомлений",
         helpText:
-            `${escapeMarkdown("/notify_add")} \\[ID\\] - Добавить администратора в список получателей уведомлений об отклоненных сообщениях\nПример: ${escapeMarkdown("/notify_add")} 123456789\nИли используйте команду без параметров для выбора через кнопку`,
+            `${escapeMarkdown("/notify_add")} - Добавить администратора в список получателей уведомлений об отклоненных сообщениях\\. Откроется кнопка для выбора пользователя\\.`,
         register: registerNotificationCommands,
     },
     {
         command: "notify_remove",
         description: "Удалить получателя уведомлений",
         helpText:
-            `${escapeMarkdown("/notify_remove")} \\[ID\\] - Удалить администратора из списка получателей уведомлений\nПример: ${escapeMarkdown("/notify_remove")} 123456789\nИли используйте команду без параметров для выбора через кнопку`,
+            `${escapeMarkdown("/notify_remove")} - Удалить администратора из списка получателей уведомлений\\. Откроется кнопка для выбора пользователя\\.`,
         register: () => {},
     },
     {
