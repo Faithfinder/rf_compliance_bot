@@ -74,7 +74,9 @@ async function processUserOperation(
     const targetPermissions = await checkUserChannelPermissions(channelId, targetUserId);
 
     if (!targetPermissions?.isAdmin) {
-        return ctx.reply("❌ Только администраторы канала могут быть добавлены в список уведомлений\\.");
+        return ctx.reply("❌ Только администраторы канала могут быть добавлены в список уведомлений\\.", {
+            parse_mode: "MarkdownV2",
+        });
     }
 
     let message = "";
@@ -82,14 +84,14 @@ async function processUserOperation(
     if (operation === "add") {
         addNotificationUser(channelId, targetUserId);
 
-        message = `✅ Администратор успешно добавлен в список уведомлений!\n\n`;
+        message = `✅ Администратор успешно добавлен в список уведомлений\\!\n\n`;
         message += `📢 *Канал:* ${formatChannelInfo(channelId, channelTitle)}\n`;
         message += `🆔 *ID пользователя:* \`${targetUserId}\`\n\n`;
         message += `Администратор будет получать уведомления\\, когда сообщения отклоняются из\\-за отсутствия текста иностранного агента\\.`;
     } else {
         removeNotificationUser(channelId, targetUserId);
 
-        message = `✅ Администратор успешно удален из списка уведомлений!\n\n`;
+        message = `✅ Администратор успешно удален из списка уведомлений\\!\n\n`;
         message += `📢 *Канал:* ${formatChannelInfo(channelId, channelTitle)}\n`;
         message += `🆔 *ID пользователя:* \`${targetUserId}\``;
     }
