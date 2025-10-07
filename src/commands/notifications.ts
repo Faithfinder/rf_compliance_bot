@@ -115,7 +115,7 @@ async function handleUserSelection(
 
         return ctx.reply(
             `👤 Пожалуйста\\, выберите администратора для ${action} ${preposition} списка уведомлений\\.`,
-            { reply_markup: keyboard },
+            { reply_markup: keyboard, parse_mode: "MarkdownV2" },
         );
     }
 
@@ -164,7 +164,7 @@ export function registerNotificationCommands(): void {
                     const user = chatMember.user;
                     message += `• ${escapeMarkdown(user.first_name)}`;
                     if (user.username) {
-                        message += ` (@${escapeMarkdown(user.username)})`;
+                        message += ` \\(@${escapeMarkdown(user.username)}\\)`;
                     }
                     message += ` \\[${targetUserId}\\]\n`;
                 } catch {

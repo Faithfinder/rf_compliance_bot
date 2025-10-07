@@ -59,7 +59,7 @@ export async function resolveChannel(identifier: string): Promise<ChannelInfo | 
  */
 export function formatChannelInfo(channelId: string, channelTitle?: string): string {
     if (channelTitle) {
-        return `${channelTitle} (\`${channelId}\`)`;
+        return `${channelTitle} \\(\`${channelId}\`\\)`;
     }
     return channelId;
 }

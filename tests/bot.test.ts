@@ -12,7 +12,7 @@ describe("Utility Functions", () => {
         const channelTitle = "Test Channel";
 
         const formatted = formatChannelInfo(channelId, channelTitle);
-        expect(formatted).toBe("Test Channel (`-1001234567890`)");
+        expect(formatted).toBe("Test Channel \\(`-1001234567890`\\)");
     });
 
     test("should format channel info without title", () => {
