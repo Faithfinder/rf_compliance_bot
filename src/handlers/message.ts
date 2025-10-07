@@ -19,7 +19,7 @@ async function sendRejectionNotification(
     rejectedMessageChatId: number,
     rejectedMessageId: number,
 ): Promise<void> {
-    const notificationUserIds = getNotificationUsers(channelId);
+    const notificationUserIds = getNotificationUsers(channelId).filter((id) => id !== rejectedUserId);
 
     if (notificationUserIds.length === 0) {
         return;
