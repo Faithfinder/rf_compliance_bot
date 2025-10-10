@@ -7,15 +7,15 @@ export function registerSettingsCommand(): void {
         const userId = ctx.from?.id;
 
         if (!userId) {
-            return ctx.reply("Не удается идентифицировать пользователя\\.");
+            return ctx.reply("Не удается идентифицировать пользователя.");
         }
 
         const channelConfig = ctx.session.channelConfig;
 
         if (!channelConfig) {
             return ctx.reply(
-                "Вы еще не настроили канал\\.\n\n" +
-                    "Используйте /setchannel <@channel или ID> для настройки\\.\n" +
+                "Вы еще не настроили канал.\n\n" +
+                    "Используйте /setchannel <@channel или ID> для настройки.\n" +
                     "Пример: /setchannel @mychannel",
             );
         }
@@ -46,15 +46,15 @@ export function registerSettingsCommand(): void {
 
         if (!permissions?.canManageChat) {
             return ctx.reply(
-                "❌ Вы должны быть администратором настроенного канала для изменения настроек\\.\n\n" +
-                    "Только администраторы канала могут обновлять общие настройки канала\\.",
+                "❌ Вы должны быть администратором настроенного канала для изменения настроек.\n\n" +
+                    "Только администраторы канала могут обновлять общие настройки канала.",
             );
         }
 
         const newBlurb = (args as string).trim();
 
         if (newBlurb.length === 0) {
-            return ctx.reply("❌ Текст иностранного агента не может быть пустым\\. Пожалуйста\\, укажите текст\\.");
+            return ctx.reply("❌ Текст иностранного агента не может быть пустым. Пожалуйста, укажите текст.");
         }
 
         updateChannelSettings(channelConfig.channelId, { foreignAgentBlurb: newBlurb });

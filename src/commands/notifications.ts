@@ -25,7 +25,7 @@ async function validateNotificationAccess(
     const userId = ctx.from?.id;
 
     if (!userId) {
-        await ctx.reply("Не удается идентифицировать пользователя\\.");
+        await ctx.reply("Не удается идентифицировать пользователя.");
         return { success: false };
     }
 
@@ -33,8 +33,8 @@ async function validateNotificationAccess(
 
     if (!channelConfig) {
         await ctx.reply(
-            "Вы еще не настроили канал\\.\n\n" +
-                "Используйте /setchannel <@channel или ID> для настройки\\.\n" +
+            "Вы еще не настроили канал.\n\n" +
+                "Используйте /setchannel <@channel или ID> для настройки.\n" +
                 "Пример: /setchannel @mychannel",
         );
         return { success: false };
@@ -123,7 +123,7 @@ async function handleUserSelection(
     const targetUser = await resolveUserIdentifier(targetIdentifier, channelId);
 
     if (!targetUser) {
-        return ctx.reply("❌ Не удалось найти пользователя\\. Убедитесь\\, что вы указали правильный числовой ID\\.");
+        return ctx.reply("❌ Не удалось найти пользователя. Убедитесь, что вы указали правильный числовой ID.");
     }
 
     return processUserOperation(ctx, channelId, channelTitle, targetUser.id, operation);
@@ -198,7 +198,7 @@ export function registerNotificationUserSelectionHandler(): void {
 
         if (!sharedUsers || !firstUser) {
             ctx.session.awaitingNotificationUserSelection = undefined;
-            return ctx.reply("❌ Пользователь не был выбран\\. Попробуйте снова\\.");
+            return ctx.reply("❌ Пользователь не был выбран. Попробуйте снова.");
         }
 
         const targetUserId = firstUser.user_id;

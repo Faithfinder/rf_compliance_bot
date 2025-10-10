@@ -13,7 +13,7 @@ export function registerInfoCommand(): void {
         const userId = ctx.from?.id;
 
         if (!userId || !ctx.from) {
-            return ctx.reply("Не удается идентифицировать пользователя\\.");
+            return ctx.reply("Не удается идентифицировать пользователя.");
         }
 
         const channelConfig = ctx.session.channelConfig;

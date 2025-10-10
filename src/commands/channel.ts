@@ -56,7 +56,7 @@ async function processChannelSelection(ctx: SessionContext, channelIdentifier: s
 
     await bot.api.deleteMessage(chatId, workingMsg.message_id).catch(() => {});
 
-    let responseText = `✅ Канал настроен!\n\n`;
+    let responseText = `✅ Канал настроен\\!\n\n`;
     responseText +=
         `Ваши сообщения теперь будут публиковаться в: ` + `${formatChannelInfo(channelInfo.id, channelInfo.title)}\n\n`;
     responseText += `📋 Требования:\n` + `${formatChannelRequirements(requirements)}`;
@@ -90,7 +90,7 @@ export function registerChannelCommands(): void {
         const userId = ctx.from?.id;
 
         if (!userId) {
-            return ctx.reply("Не удается идентифицировать пользователя\\.");
+            return ctx.reply("Не удается идентифицировать пользователя.");
         }
 
         const args = ctx.match;
@@ -108,17 +108,18 @@ export function registerChannelCommands(): void {
         const userId = ctx.from?.id;
 
         if (!userId) {
-            return ctx.reply("Не удается идентифицировать пользователя\\.");
+            return ctx.reply("Не удается идентифицировать пользователя.");
         }
 
         if (!ctx.session.channelConfig) {
-            return ctx.reply("У вас не настроен канал\\.");
+            return ctx.reply("У вас не настроен канал.");
         }
 
         delete ctx.session.channelConfig;
 
         return ctx.reply(
             "✅ Конфигурация канала успешно удалена\\.\n\nВаши сообщения больше не будут публиковаться ни в какой канал\\.",
+            { parse_mode: "MarkdownV2" },
         );
     });
 
@@ -126,7 +127,7 @@ export function registerChannelCommands(): void {
         const userId = ctx.from?.id;
 
         if (!userId) {
-            return ctx.reply("Не удается идентифицировать пользователя\\.");
+            return ctx.reply("Не удается идентифицировать пользователя.");
         }
 
         if (!ctx.session.awaitingChannelSelection) {
