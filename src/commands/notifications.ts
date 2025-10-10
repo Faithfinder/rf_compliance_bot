@@ -157,7 +157,7 @@ export function registerNotificationCommands(): void {
         message += `📢 <b>Канал:</b> ${formatChannelInfo(validation.channelId, validation.channelTitle)}\n\n`;
 
         if (notificationUserIds.length === 0) {
-            message += `Список пуст. Используйте <code>/notify_add</code> для добавления администраторов.`;
+            message += `Список пуст. Используйте ${escapeHtml("/notify_add")} для добавления администраторов.`;
         } else {
             message += `👥 <b>Подписчики на уведомления:</b>\n`;
 

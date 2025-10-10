@@ -31,7 +31,7 @@ export function registerStartCommand(): void {
         return ctx.reply(
             `${escapeHtml(welcomeMessage)}\n\n` +
                 `✅ Ваш канал настроен: ${channelInfo}\n\n` +
-                `Используйте <code>/help</code> для просмотра доступных команд.`,
+                `Используйте ${escapeHtml("/help")} для просмотра доступных команд.`,
             { parse_mode: "HTML" },
         );
     });

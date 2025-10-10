@@ -70,13 +70,13 @@ export function registerInfoCommand(): void {
             }
 
             if (!isFixedChannelMode()) {
-                infoMessage += `Используйте <code>/removechannel</code> для удаления этой конфигурации`;
+                infoMessage += `Используйте ${escapeHtml("/removechannel")} для удаления этой конфигурации`;
             }
         } else {
             infoMessage += `📢 <b>Настроенный канал:</b> Нет\n\n`;
             infoMessage += `❌ Канал не настроен\n`;
             if (!isFixedChannelMode()) {
-                infoMessage += `Используйте <code>/setchannel</code> для настройки`;
+                infoMessage += `Используйте ${escapeHtml("/setchannel")} для настройки`;
             }
         }
 

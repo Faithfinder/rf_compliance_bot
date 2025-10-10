@@ -21,9 +21,9 @@ export function showChannelSelectionUI(errorMessage?: string): { text: string; k
 
     const baseText = [
         "Пожалуйста, выберите канал из кнопки ниже или используйте:",
-        `<code>${escapeHtml("/setchannel <@channel или ID>")}</code>`,
+        escapeHtml("/setchannel <@channel или ID>"),
         "",
-        `Пример: <code>${escapeHtml("/setchannel @mychannel")}</code>`,
+        `Пример: ${escapeHtml("/setchannel @mychannel")}`,
     ].join("\n");
 
     let text = baseText;
@@ -71,7 +71,7 @@ async function processChannelSelection(ctx: SessionContext, channelIdentifier: s
         responseText += `\n\n`;
 
         if (!requirements.foreignAgentBlurbConfigured) {
-            responseText += `<b>Следующий шаг:</b> Используйте <code>${escapeHtml("/set_fa_blurb <ваш текст>")}</code> для настройки текста иностранного агента. Только администраторы канала могут настраивать параметры.\n\n`;
+            responseText += `<b>Следующий шаг:</b> Используйте ${escapeHtml("/set_fa_blurb <ваш текст>")} для настройки текста иностранного агента. Только администраторы канала могут настраивать параметры.\n\n`;
         }
 
         const keyboard = new Keyboard()

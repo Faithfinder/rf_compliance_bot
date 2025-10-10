@@ -37,7 +37,7 @@ export function registerSettingsCommand(): void {
             }
 
             message += `Чтобы обновить текст иностранного агента, используйте:\n`;
-            message += `<code>${escapeHtml("/set_fa_blurb <ваш текст>")}</code>`;
+            message += escapeHtml("/set_fa_blurb <ваш текст>");
 
             return ctx.reply(message, { parse_mode: "HTML" });
         }
