@@ -3,6 +3,7 @@ import {
     checkChannelRequirements,
     formatChannelRequirements,
     checkUserChannelPermissions,
+    formatChannelInfo,
     escapeMarkdown,
 } from "../utils";
 import { getChannelSettings } from "../db/database";
@@ -27,8 +28,7 @@ export function registerInfoCommand(): void {
 
         if (channelConfig) {
             infoMessage += `📢 *Настроенный канал:*\n`;
-            const channelTitle = channelConfig.channelTitle ? escapeMarkdown(channelConfig.channelTitle) : undefined;
-            infoMessage += `${channelTitle ? `${channelTitle} \\(\`${channelConfig.channelId}\`\\)` : channelConfig.channelId}\n`;
+            infoMessage += `${formatChannelInfo(channelConfig.channelId, channelConfig.channelTitle)}\n`;
             if (isFixedChannelMode()) {
                 infoMessage += `🔒 Фиксированный канал \\(установлен администратором\\)\n`;
             }

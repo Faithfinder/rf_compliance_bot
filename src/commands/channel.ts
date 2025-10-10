@@ -19,11 +19,17 @@ export function showChannelSelectionUI(errorMessage?: string): { text: string; k
         .resized()
         .oneTime();
 
-    let text =
-        "Пожалуйста\\, выберите канал из кнопки ниже или используйте:\n/setchannel <@channel или ID>\n\nПример: /setchannel @mychannel";
+    const baseText = [
+        escapeMarkdown("Пожалуйста, выберите канал из кнопки ниже или используйте:"),
+        `${escapeMarkdown("/setchannel")} <@channel или ID>`,
+        "",
+        `Пример: ${escapeMarkdown("/setchannel")} @mychannel`,
+    ].join("\n");
+
+    let text = baseText;
 
     if (errorMessage) {
-        text = `❌ ${errorMessage}\n\n${text}`;
+        text = `❌ ${escapeMarkdown(errorMessage)}\n\n${text}`;
     }
 
     return { text, keyboard };
@@ -32,16 +38,16 @@ export function showChannelSelectionUI(errorMessage?: string): { text: string; k
 async function processChannelSelection(ctx: SessionContext, channelIdentifier: string): Promise<void> {
     const chatId = ctx.chat!.id;
 
-    const workingMsg = await ctx.reply("Поиск канала\\.\\.\\.");
+    const workingMsg = await ctx.reply("Поиск канала...");
     const channelInfo = await resolveChannel(channelIdentifier);
 
     if (!channelInfo) {
         await bot.api.deleteMessage(chatId, workingMsg.message_id).catch(() => {});
         const errorMessage =
-            "Не удается найти или получить доступ к этому каналу\\. Убедитесь\\, что бот был добавлен в канал в качестве администратора\\.";
+            "Не удается найти или получить доступ к этому каналу. Убедитесь, что бот был добавлен в канал в качестве администратора.";
         const { text, keyboard } = showChannelSelectionUI(errorMessage);
         ctx.session.awaitingChannelSelection = true;
-        await ctx.reply(text, { reply_markup: keyboard });
+        await ctx.reply(text, { reply_markup: keyboard, parse_mode: "MarkdownV2" });
         return;
     }
 
@@ -50,7 +56,7 @@ async function processChannelSelection(ctx: SessionContext, channelIdentifier: s
         channelTitle: channelInfo.title,
     };
 
-    await bot.api.editMessageText(chatId, workingMsg.message_id, "Проверка разрешений бота\\.\\.\\.");
+    await bot.api.editMessageText(chatId, workingMsg.message_id, "Проверка разрешений бота...");
 
     const requirements = await checkChannelRequirements(channelInfo.id);
 
@@ -97,7 +103,7 @@ export function registerChannelCommands(): void {
         if (!args || typeof args !== "string" || args.trim() === "") {
             const { text, keyboard } = showChannelSelectionUI();
             ctx.session.awaitingChannelSelection = true;
-            return ctx.reply(text, { reply_markup: keyboard });
+            return ctx.reply(text, { reply_markup: keyboard, parse_mode: "MarkdownV2" });
         }
 
         const channelIdentifier = args.trim();

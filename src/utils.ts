@@ -58,10 +58,14 @@ export async function resolveChannel(identifier: string): Promise<ChannelInfo | 
  * @returns Formatted string for display
  */
 export function formatChannelInfo(channelId: string, channelTitle?: string): string {
+    const escapedId = channelId.replace(/\\/g, "\\\\").replace(/`/g, "\\`");
+    const idWithCode = `\`${escapedId}\``;
+
     if (channelTitle) {
-        return `${channelTitle} \\(\`${channelId}\`\\)`;
+        return `${escapeMarkdown(channelTitle)} \\(${idWithCode}\\)`;
     }
-    return channelId;
+
+    return idWithCode;
 }
 
 export interface ChannelRequirements {

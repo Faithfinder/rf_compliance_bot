@@ -1,15 +1,12 @@
 import { bot } from "../config/bot";
 import type { SessionContext } from "../config/session";
 import { showChannelSelectionUI } from "./channel";
-import { formatChannelInfo } from "../utils";
+import { formatChannelInfo, escapeMarkdown } from "../utils";
 
 export function registerStartCommand(): void {
     bot.command("start", async (ctx: SessionContext) => {
-        const welcomeMessage = `
-Добро пожаловать в RF Compliance Bot! 👋
-
-Я могу помочь вам с соответствием требованиям РФ об иностранных агентах.
-    `.trim();
+        const welcomeMessage =
+            "Добро пожаловать в RF Compliance Bot! 👋\n\nЯ могу помочь вам с соответствием требованиям РФ об иностранных агентах.";
 
         if (!ctx.session.channelConfig) {
             const { text, keyboard } = showChannelSelectionUI();
@@ -17,8 +14,12 @@ export function registerStartCommand(): void {
             ctx.session.awaitingChannelSelection = true;
 
             await ctx.reply(welcomeMessage);
-            return ctx.reply(`Для начала работы настройте канал, куда я буду публиковать ваши сообщения:\n\n${text}`, {
+            const setupPrompt =
+                `${escapeMarkdown("Для начала работы настройте канал, куда я буду публиковать ваши сообщения:")}\n\n` +
+                text;
+            return ctx.reply(setupPrompt, {
                 reply_markup: keyboard,
+                parse_mode: "MarkdownV2",
             });
         }
 
@@ -28,7 +29,9 @@ export function registerStartCommand(): void {
         );
 
         return ctx.reply(
-            `${welcomeMessage}\n\n✅ Ваш канал настроен: ${channelInfo}\n\nИспользуйте /help для просмотра доступных команд\\.`,
+            `${escapeMarkdown(welcomeMessage)}\n\n` +
+                `✅ Ваш канал настроен: ${channelInfo}\n\n` +
+                `${escapeMarkdown("Используйте /help для просмотра доступных команд.")}`,
             { parse_mode: "MarkdownV2" },
         );
     });

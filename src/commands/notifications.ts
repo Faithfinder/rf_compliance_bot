@@ -13,9 +13,9 @@ interface ValidationResult {
 type RequiredPermission = "isAdmin" | "canManageChat";
 
 const permissionErrorMessages: Record<RequiredPermission, string> = {
-    isAdmin: "❌ Только администраторы канала могут просматривать список уведомлений\\.",
+    isAdmin: "❌ Только администраторы канала могут просматривать список уведомлений.",
     canManageChat:
-        "❌ Только администраторы канала с разрешением управления чатом могут управлять списком уведомлений\\.",
+        "❌ Только администраторы канала с разрешением управления чатом могут управлять списком уведомлений.",
 };
 
 async function validateNotificationAccess(
@@ -43,7 +43,7 @@ async function validateNotificationAccess(
     const permissions = await checkUserChannelPermissions(channelConfig.channelId, userId);
 
     if (!permissions?.[requiredPermission]) {
-        await ctx.reply(permissionErrorMessages[requiredPermission]);
+        await ctx.reply(escapeMarkdown(permissionErrorMessages[requiredPermission]), { parse_mode: "MarkdownV2" });
         return { success: false };
     }
 
@@ -74,9 +74,12 @@ async function processUserOperation(
     const targetPermissions = await checkUserChannelPermissions(channelId, targetUserId);
 
     if (!targetPermissions?.isAdmin) {
-        return ctx.reply("❌ Только администраторы канала могут быть добавлены в список уведомлений\\.", {
-            parse_mode: "MarkdownV2",
-        });
+        return ctx.reply(
+            escapeMarkdown("❌ Только администраторы канала могут быть добавлены в список уведомлений."),
+            {
+                parse_mode: "MarkdownV2",
+            },
+        );
     }
 
     let message = "";

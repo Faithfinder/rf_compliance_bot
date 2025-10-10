@@ -19,55 +19,59 @@ export const commandDefinitions: CommandDefinition[] = [
     {
         command: "start",
         description: "Запустить бота",
-        helpText: "/start \\- Запустить бота и показать приветственное сообщение",
+        helpText: `${escapeMarkdown("/start")} \\- Запустить бота и показать приветственное сообщение`,
         register: registerStartCommand,
     },
     {
         command: "help",
         description: "Показать справочное сообщение",
-        helpText: "/help \\- Показать это справочное сообщение",
+        helpText: `${escapeMarkdown("/help")} \\- Показать это справочное сообщение`,
         register: registerHelpCommand,
     },
     {
         command: "info",
         description: "Показать конфигурацию бота",
-        helpText: "/info \\- Показать сводку конфигурации бота",
+        helpText: `${escapeMarkdown("/info")} \\- Показать сводку конфигурации бота`,
         register: registerInfoCommand,
     },
     {
         command: "setchannel",
         description: "Настроить канал",
-        helpText:
-            "/setchannel <@channel или ID> \\- Настроить канал для публикации ваших сообщений\nПример: /setchannel @mychannel",
+        helpText: [
+            `${escapeMarkdown("/setchannel <@channel или ID>")} \\- Настроить канал для публикации ваших сообщений`,
+            escapeMarkdown("Пример: /setchannel @mychannel"),
+        ].join("\n"),
         register: registerChannelCommands,
         available: () => !isFixedChannelMode(),
     },
     {
         command: "removechannel",
         description: "Удалить настройку канала",
-        helpText: "/removechannel \\- Удалить настройку канала",
+        helpText: `${escapeMarkdown("/removechannel")} \\- Удалить настройку канала`,
         register: () => {}, // Registered together with setchannel
         available: () => !isFixedChannelMode(),
     },
     {
         command: "set_fa_blurb",
         description: "Настроить текст иностранного агента",
-        helpText:
-            `${escapeMarkdown("/set_fa_blurb")} <текст> \\- Настроить текст иностранного агента для канала\nПример: ${escapeMarkdown("/set_fa_blurb")} НАСТОЯЩИЙ МАТЕРИАЛ \\(ИНФОРМАЦИЯ\\) ПРОИЗВЕДЕН И РАСПРОСТРАНЕН ИНОСТРАННЫМ АГЕНТОМ «ИМЯ АГЕНТА» ЛИБО КАСАЕТСЯ ДЕЯТЕЛЬНОСТИ ИНОСТРАННОГО АГЕНТА «ИМЯ АГЕНТА»\\. 18+`,
+        helpText: [
+            `${escapeMarkdown("/set_fa_blurb <текст>")} \\- Настроить текст иностранного агента для канала`,
+            escapeMarkdown(
+                "Пример: /set_fa_blurb НАСТОЯЩИЙ МАТЕРИАЛ (ИНФОРМАЦИЯ) ПРОИЗВЕДЕН И РАСПРОСТРАНЕН ИНОСТРАННЫМ АГЕНТОМ «ИМЯ АГЕНТА» ЛИБО КАСАЕТСЯ ДЕЯТЕЛЬНОСТИ ИНОСТРАННОГО АГЕНТА «ИМЯ АГЕНТА». 18+",
+            ),
+        ].join("\n"),
         register: registerSettingsCommand,
     },
     {
         command: "notify_add",
         description: "Добавить получателя уведомлений",
-        helpText:
-            `${escapeMarkdown("/notify_add")} \\- Добавить администратора в список получателей уведомлений об отклоненных сообщениях\\. Откроется кнопка для выбора пользователя\\.`,
+        helpText: `${escapeMarkdown("/notify_add")} \\- Добавить администратора в список получателей уведомлений об отклоненных сообщениях\\. Откроется кнопка для выбора пользователя\\.`,
         register: registerNotificationCommands,
     },
     {
         command: "notify_remove",
         description: "Удалить получателя уведомлений",
-        helpText:
-            `${escapeMarkdown("/notify_remove")} \\- Удалить администратора из списка получателей уведомлений\\. Откроется кнопка для выбора пользователя\\.`,
+        helpText: `${escapeMarkdown("/notify_remove")} \\- Удалить администратора из списка получателей уведомлений\\. Откроется кнопка для выбора пользователя\\.`,
         register: () => {},
     },
     {
