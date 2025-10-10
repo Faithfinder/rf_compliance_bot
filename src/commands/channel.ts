@@ -21,7 +21,7 @@ export function showChannelSelectionUI(errorMessage?: string): { text: string; k
 
     const baseText = [
         escapeMarkdown("Пожалуйста, выберите канал из кнопки ниже или используйте:"),
-        `${escapeMarkdown("/setchannel")} <@channel или ID>`,
+        `${escapeMarkdown("/setchannel")} <@channel или ID\\>`,
         "",
         `Пример: ${escapeMarkdown("/setchannel")} @mychannel`,
     ].join("\n");
