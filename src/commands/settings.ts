@@ -1,6 +1,6 @@
 import { bot } from "../config/bot";
 import { getChannelSettings, updateChannelSettings } from "../db/database";
-import { checkUserChannelPermissions, formatChannelInfo, escapeMarkdown } from "../utils";
+import { checkUserChannelPermissions, formatChannelInfo, escapeHtml } from "../utils";
 
 export function registerSettingsCommand(): void {
     bot.command("set_fa_blurb", async (ctx) => {
@@ -26,20 +26,20 @@ export function registerSettingsCommand(): void {
         if (isViewMode) {
             const channelSettings = getChannelSettings(channelConfig.channelId);
 
-            let message = `⚙️ *Настройки канала*\n\n`;
-            message += `📢 *Канал:* ${formatChannelInfo(channelConfig.channelId, channelConfig.channelTitle)}\n\n`;
-            message += `🌍 *Текст иностранного агента:*\n`;
+            let message = `⚙️ <b>Настройки канала</b>\n\n`;
+            message += `📢 <b>Канал:</b> ${formatChannelInfo(channelConfig.channelId, channelConfig.channelTitle)}\n\n`;
+            message += `🌍 <b>Текст иностранного агента:</b>\n`;
 
             if (channelSettings?.foreignAgentBlurb) {
-                message += `${escapeMarkdown(channelSettings.foreignAgentBlurb)}\n\n`;
+                message += `${escapeHtml(channelSettings.foreignAgentBlurb)}\n\n`;
             } else {
-                message += `_Не настроено_\n\n`;
+                message += `<i>Не настроено</i>\n\n`;
             }
 
-            message += `Чтобы обновить текст иностранного агента\\, используйте:\n`;
-            message += `${escapeMarkdown("/set_fa_blurb")} <ваш текст>`;
+            message += `Чтобы обновить текст иностранного агента, используйте:\n`;
+            message += `<code>${escapeHtml("/set_fa_blurb <ваш текст>")}</code>`;
 
-            return ctx.reply(message, { parse_mode: "MarkdownV2" });
+            return ctx.reply(message, { parse_mode: "HTML" });
         }
 
         const permissions = await checkUserChannelPermissions(channelConfig.channelId, userId);
@@ -60,9 +60,9 @@ export function registerSettingsCommand(): void {
         updateChannelSettings(channelConfig.channelId, { foreignAgentBlurb: newBlurb });
 
         let confirmMessage = `✅ Текст иностранного агента успешно обновлен!\n\n`;
-        confirmMessage += `📢 *Канал:* ${formatChannelInfo(channelConfig.channelId, channelConfig.channelTitle)}\n\n`;
-        confirmMessage += `🌍 *Новый текст иностранного агента:*\n` + escapeMarkdown(newBlurb);
+        confirmMessage += `📢 <b>Канал:</b> ${formatChannelInfo(channelConfig.channelId, channelConfig.channelTitle)}\n\n`;
+        confirmMessage += `🌍 <b>Новый текст иностранного агента:</b>\n` + escapeHtml(newBlurb);
 
-        return ctx.reply(confirmMessage, { parse_mode: "MarkdownV2" });
+        return ctx.reply(confirmMessage, { parse_mode: "HTML" });
     });
 }

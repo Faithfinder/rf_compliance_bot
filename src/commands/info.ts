@@ -4,7 +4,7 @@ import {
     formatChannelRequirements,
     checkUserChannelPermissions,
     formatChannelInfo,
-    escapeMarkdown,
+    escapeHtml,
 } from "../utils";
 import { getChannelSettings } from "../db/database";
 import { isFixedChannelMode } from "../config/environment";
@@ -19,37 +19,37 @@ export function registerInfoCommand(): void {
 
         const channelConfig = ctx.session.channelConfig;
 
-        let infoMessage = "🤖 *Конфигурация бота*\n\n";
-        infoMessage += `👤 *Пользователь:* ${escapeMarkdown(ctx.from.first_name)}`;
+        let infoMessage = "🤖 <b>Конфигурация бота</b>\n\n";
+        infoMessage += `👤 <b>Пользователь:</b> ${escapeHtml(ctx.from.first_name)}`;
         if (ctx.from.username) {
-            infoMessage += ` \\(@${escapeMarkdown(ctx.from.username)}\\)`;
+            infoMessage += ` (@${escapeHtml(ctx.from.username)})`;
         }
-        infoMessage += `\n📱 *ID пользователя:* \`${userId}\`\n\n`;
+        infoMessage += `\n📱 <b>ID пользователя:</b> <code>${escapeHtml(String(userId))}</code>\n\n`;
 
         if (channelConfig) {
-            infoMessage += `📢 *Настроенный канал:*\n`;
+            infoMessage += `📢 <b>Настроенный канал:</b>\n`;
             infoMessage += `${formatChannelInfo(channelConfig.channelId, channelConfig.channelTitle)}\n`;
             if (isFixedChannelMode()) {
-                infoMessage += `🔒 Фиксированный канал \\(установлен администратором\\)\n`;
+                infoMessage += `🔒 Фиксированный канал (установлен администратором)\n`;
             }
             infoMessage += `\n`;
 
             const requirements = await checkChannelRequirements(channelConfig.channelId);
 
-            infoMessage += `📋 *Требования:*\n`;
+            infoMessage += `📋 <b>Требования:</b>\n`;
             infoMessage += `${formatChannelRequirements(requirements)}\n\n`;
 
             const channelSettings = getChannelSettings(channelConfig.channelId);
 
             if (channelSettings?.foreignAgentBlurb) {
-                infoMessage += `⚙️ *Настройки канала:*\n`;
-                infoMessage += `🌍 *Текст иностранного агента:*\n${escapeMarkdown(channelSettings.foreignAgentBlurb)}\n\n`;
+                infoMessage += `⚙️ <b>Настройки канала:</b>\n`;
+                infoMessage += `🌍 <b>Текст иностранного агента:</b>\n${escapeHtml(channelSettings.foreignAgentBlurb)}\n\n`;
             }
 
             const userPermissions = await checkUserChannelPermissions(channelConfig.channelId, userId);
 
             if (userPermissions) {
-                infoMessage += `👤 *Ваши разрешения:*\n`;
+                infoMessage += `👤 <b>Ваши разрешения:</b>\n`;
 
                 if (userPermissions.isMember) {
                     infoMessage += `✅ Участник канала\n`;
@@ -60,7 +60,7 @@ export function registerInfoCommand(): void {
                 if (userPermissions.isAdmin) {
                     infoMessage += `✅ Администратор\n`;
                     if (userPermissions.canPostMessages)
-                        infoMessage += `⚠️ Может публиковать сообщения \\(Это право следует убрать\\, чтобы предотвратить обход бота\\)\n`;
+                        infoMessage += `⚠️ Может публиковать сообщения (Это право следует убрать, чтобы предотвратить обход бота)\n`;
                     if (userPermissions.canEditMessages) infoMessage += `✅ Может редактировать сообщения\n`;
                     if (userPermissions.canManageChat) infoMessage += `✅ Может управлять чатом\n`;
                 } else {
@@ -70,16 +70,16 @@ export function registerInfoCommand(): void {
             }
 
             if (!isFixedChannelMode()) {
-                infoMessage += `Используйте /removechannel для удаления этой конфигурации`;
+                infoMessage += `Используйте <code>/removechannel</code> для удаления этой конфигурации`;
             }
         } else {
-            infoMessage += `📢 *Настроенный канал:* Нет\n\n`;
+            infoMessage += `📢 <b>Настроенный канал:</b> Нет\n\n`;
             infoMessage += `❌ Канал не настроен\n`;
             if (!isFixedChannelMode()) {
-                infoMessage += `Используйте /setchannel для настройки`;
+                infoMessage += `Используйте <code>/setchannel</code> для настройки`;
             }
         }
 
-        return ctx.reply(infoMessage, { parse_mode: "MarkdownV2" });
+        return ctx.reply(infoMessage, { parse_mode: "HTML" });
     });
 }

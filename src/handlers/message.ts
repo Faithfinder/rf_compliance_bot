@@ -6,7 +6,7 @@ import {
     checkChannelRequirements,
     formatChannelRequirements,
     checkUserChannelPermissions,
-    escapeMarkdown,
+    escapeHtml,
 } from "../utils";
 import { getChannelSettings, getNotificationUsers } from "../db/database";
 
@@ -34,21 +34,21 @@ async function sendRejectionNotification(
         minute: "2-digit",
     });
 
-    let notificationMessage = `🚫 *Сообщение отклонено*\n\n`;
-    notificationMessage += `📢 *Канал:* ${formatChannelInfo(channelId, channelTitle)}\n`;
-    notificationMessage += `👤 *Пользователь:* ${escapeMarkdown(rejectedUserFirstName)}`;
+    let notificationMessage = `🚫 <b>Сообщение отклонено</b>\n\n`;
+    notificationMessage += `📢 <b>Канал:</b> ${formatChannelInfo(channelId, channelTitle)}\n`;
+    notificationMessage += `👤 <b>Пользователь:</b> ${escapeHtml(rejectedUserFirstName)}`;
     if (rejectedUserHandle) {
-        notificationMessage += ` \\(@${escapeMarkdown(rejectedUserHandle)}\\)`;
+        notificationMessage += ` (@${escapeHtml(rejectedUserHandle)})`;
     }
-    notificationMessage += `\n🆔 *ID:* \`${rejectedUserId}\`\n`;
-    notificationMessage += `🕐 *Время:* ${escapeMarkdown(timestamp)}\n\n`;
-    notificationMessage += `❌ *Причина:* Отсутствует текст иностранного агента\n\n`;
-    notificationMessage += `📝 *Отклоненное сообщение:*`;
+    notificationMessage += `\n🆔 <b>ID:</b> <code>${escapeHtml(String(rejectedUserId))}</code>\n`;
+    notificationMessage += `🕐 <b>Время:</b> ${escapeHtml(timestamp)}\n\n`;
+    notificationMessage += `❌ <b>Причина:</b> Отсутствует текст иностранного агента\n\n`;
+    notificationMessage += `📝 <b>Отклоненное сообщение:</b>`;
 
     for (const notifyUserId of notificationUserIds) {
         try {
             await bot.api.sendMessage(notifyUserId, notificationMessage, {
-                parse_mode: "MarkdownV2",
+                parse_mode: "HTML",
             });
 
             await bot.api.copyMessage(notifyUserId, rejectedMessageChatId, rejectedMessageId);
@@ -106,10 +106,12 @@ export function registerMessageHandler(): void {
                 `❌ Невозможно опубликовать сообщение: Блурб иностранного агента не настроен для ` +
                 `${formatChannelInfo(channelConfig.channelId, channelConfig.channelTitle)}\n\n`;
             errorMessage += `📋 Требования:\n` + `${formatChannelRequirements(requirements)}\n\n`;
-            errorMessage += `*Следующий шаг:* Используйте \`${escapeMarkdown("/set_fa_blurb")} <ваш текст>\` для настройки текста иностранного агента для этого канала\\.\n\n`;
-            errorMessage += `Только администраторы канала могут настраивать параметры\\.`;
+            errorMessage += `<b>Следующий шаг:</b> Используйте <code>${escapeHtml(
+                "/set_fa_blurb <ваш текст>",
+            )}</code> для настройки текста иностранного агента для этого канала.\n\n`;
+            errorMessage += `Только администраторы канала могут настраивать параметры.`;
 
-            return ctx.reply(errorMessage, { parse_mode: "MarkdownV2" });
+            return ctx.reply(errorMessage, { parse_mode: "HTML" });
         }
 
         const messageText = ctx.message.text || ctx.message.caption;
@@ -125,14 +127,14 @@ export function registerMessageHandler(): void {
                 ctx.message.message_id,
             );
 
-            let errorMessage = `❌ Невозможно опубликовать сообщение: Ваше сообщение должно содержать текст иностранного агента\\.\n\n`;
-            errorMessage += `🌍 *Необходимый текст:*\n` + `${escapeMarkdown(foreignAgentBlurb)}\n\n`;
-            errorMessage += `Пожалуйста\\, добавьте этот текст к вашему сообщению и повторите попытку\\.\n`;
+            let errorMessage = `❌ Невозможно опубликовать сообщение: Ваше сообщение должно содержать текст иностранного агента.\n\n`;
+            errorMessage += `🌍 <b>Необходимый текст:</b>\n` + `${escapeHtml(foreignAgentBlurb)}\n\n`;
+            errorMessage += `Пожалуйста, добавьте этот текст к вашему сообщению и повторите попытку.\n`;
             errorMessage += `Оригинальное сообщение:`;
 
             await ctx.api.copyMessage(ctx.chat.id, ctx.chat.id, ctx.message.message_id);
 
-            return await ctx.reply(errorMessage, { parse_mode: "MarkdownV2" });
+            return await ctx.reply(errorMessage, { parse_mode: "HTML" });
         }
 
         try {
@@ -140,7 +142,7 @@ export function registerMessageHandler(): void {
 
             return ctx.reply(
                 `✅ Сообщение опубликовано в ` + formatChannelInfo(channelConfig.channelId, channelConfig.channelTitle),
-                { parse_mode: "MarkdownV2" },
+                { parse_mode: "HTML" },
             );
         } catch (error) {
             console.error("Error posting to channel:", error);
@@ -164,7 +166,7 @@ export function registerMessageHandler(): void {
 
             if (!requirements.channelExists) {
                 errorMessage +=
-                    "*Следующий шаг:* Канал больше не существует или бот не может получить к нему доступ\\. Пожалуйста\\, выберите другой канал\\.";
+                    "<b>Следующий шаг:</b> Канал больше не существует или бот не может получить к нему доступ. Пожалуйста, выберите другой канал.";
 
                 const keyboard = new Keyboard()
                     .requestChat("Выбрать другой канал", 1, {
@@ -176,18 +178,18 @@ export function registerMessageHandler(): void {
                     .oneTime();
 
                 ctx.session.awaitingChannelSelection = true;
-                return ctx.reply(errorMessage, { reply_markup: keyboard, parse_mode: "MarkdownV2" });
+                return ctx.reply(errorMessage, { reply_markup: keyboard, parse_mode: "HTML" });
             } else if (!requirements.botIsAdded) {
                 errorMessage +=
-                    "*Следующий шаг:* Попросите администратора канала добавить этого бота в качестве администратора в канал\\.";
+                    '<b>Следующий шаг:</b> Попросите администратора канала добавить этого бота в качестве администратора в канал.';
             } else if (!requirements.botCanPost) {
                 errorMessage +=
-                    '*Следующий шаг:* Попросите администратора канала предоставить боту разрешение "Публиковать сообщения"\\.';
+                    '<b>Следующий шаг:</b> Попросите администратора канала предоставить боту разрешение "Публиковать сообщения".';
             }
 
-            errorMessage += "\n\nИли используйте /setchannel для настройки другого канала";
+            errorMessage += "\n\nИли используйте <code>/setchannel</code> для настройки другого канала";
 
-            return ctx.reply(errorMessage, { parse_mode: "MarkdownV2" });
+            return ctx.reply(errorMessage, { parse_mode: "HTML" });
         }
     });
 }

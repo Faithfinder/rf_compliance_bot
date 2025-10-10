@@ -7,12 +7,17 @@ interface ChannelInfo {
 }
 
 /**
- * Escapes special characters in text for MarkdownV2 formatting
+ * Escapes special characters in text for HTML formatting
  * @param text The text to escape
- * @returns Escaped text safe for MarkdownV2
+ * @returns Escaped text safe for inclusion in HTML messages
  */
-export function escapeMarkdown(text: string): string {
-    return text.replace(/[_*[\]()~`>#+\-=|{}.!\\]/g, "\\$&");
+export function escapeHtml(text: string): string {
+    return text
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
 }
 
 /**
@@ -58,11 +63,11 @@ export async function resolveChannel(identifier: string): Promise<ChannelInfo | 
  * @returns Formatted string for display
  */
 export function formatChannelInfo(channelId: string, channelTitle?: string): string {
-    const escapedId = channelId.replace(/\\/g, "\\\\").replace(/`/g, "\\`");
-    const idWithCode = `\`${escapedId}\``;
+    const escapedId = escapeHtml(channelId);
+    const idWithCode = `<code>${escapedId}</code>`;
 
     if (channelTitle) {
-        return `${escapeMarkdown(channelTitle)} \\(${idWithCode}\\)`;
+        return `${escapeHtml(channelTitle)} (${idWithCode})`;
     }
 
     return idWithCode;

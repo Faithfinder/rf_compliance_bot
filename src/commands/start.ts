@@ -1,7 +1,7 @@
 import { bot } from "../config/bot";
 import type { SessionContext } from "../config/session";
 import { showChannelSelectionUI } from "./channel";
-import { formatChannelInfo, escapeMarkdown } from "../utils";
+import { formatChannelInfo, escapeHtml } from "../utils";
 
 export function registerStartCommand(): void {
     bot.command("start", async (ctx: SessionContext) => {
@@ -15,11 +15,11 @@ export function registerStartCommand(): void {
 
             await ctx.reply(welcomeMessage);
             const setupPrompt =
-                `${escapeMarkdown("Для начала работы настройте канал, куда я буду публиковать ваши сообщения:")}\n\n` +
+                `Для начала работы настройте канал, куда я буду публиковать ваши сообщения:\n\n` +
                 text;
             return ctx.reply(setupPrompt, {
                 reply_markup: keyboard,
-                parse_mode: "MarkdownV2",
+                parse_mode: "HTML",
             });
         }
 
@@ -29,10 +29,10 @@ export function registerStartCommand(): void {
         );
 
         return ctx.reply(
-            `${escapeMarkdown(welcomeMessage)}\n\n` +
+            `${escapeHtml(welcomeMessage)}\n\n` +
                 `✅ Ваш канал настроен: ${channelInfo}\n\n` +
-                `${escapeMarkdown("Используйте /help для просмотра доступных команд.")}`,
-            { parse_mode: "MarkdownV2" },
+                `Используйте <code>/help</code> для просмотра доступных команд.`,
+            { parse_mode: "HTML" },
         );
     });
 }

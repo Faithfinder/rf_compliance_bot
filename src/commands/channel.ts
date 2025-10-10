@@ -7,7 +7,7 @@ import {
     checkChannelRequirements,
     formatChannelRequirements,
     allRequirementsPassed,
-    escapeMarkdown,
+    escapeHtml,
 } from "../utils";
 
 export function showChannelSelectionUI(errorMessage?: string): { text: string; keyboard: Keyboard } {
@@ -20,16 +20,16 @@ export function showChannelSelectionUI(errorMessage?: string): { text: string; k
         .oneTime();
 
     const baseText = [
-        escapeMarkdown("Пожалуйста, выберите канал из кнопки ниже или используйте:"),
-        `${escapeMarkdown("/setchannel")} <@channel или ID\\>`,
+        "Пожалуйста, выберите канал из кнопки ниже или используйте:",
+        `<code>${escapeHtml("/setchannel <@channel или ID>")}</code>`,
         "",
-        `Пример: ${escapeMarkdown("/setchannel")} @mychannel`,
+        `Пример: <code>${escapeHtml("/setchannel @mychannel")}</code>`,
     ].join("\n");
 
     let text = baseText;
 
     if (errorMessage) {
-        text = `❌ ${escapeMarkdown(errorMessage)}\n\n${text}`;
+        text = `❌ ${escapeHtml(errorMessage)}\n\n${text}`;
     }
 
     return { text, keyboard };
@@ -47,7 +47,7 @@ async function processChannelSelection(ctx: SessionContext, channelIdentifier: s
             "Не удается найти или получить доступ к этому каналу. Убедитесь, что бот был добавлен в канал в качестве администратора.";
         const { text, keyboard } = showChannelSelectionUI(errorMessage);
         ctx.session.awaitingChannelSelection = true;
-        await ctx.reply(text, { reply_markup: keyboard, parse_mode: "MarkdownV2" });
+        await ctx.reply(text, { reply_markup: keyboard, parse_mode: "HTML" });
         return;
     }
 
@@ -62,7 +62,7 @@ async function processChannelSelection(ctx: SessionContext, channelIdentifier: s
 
     await bot.api.deleteMessage(chatId, workingMsg.message_id).catch(() => {});
 
-    let responseText = `✅ Канал настроен\\!\n\n`;
+    let responseText = `✅ Канал настроен!\n\n`;
     responseText +=
         `Ваши сообщения теперь будут публиковаться в: ` + `${formatChannelInfo(channelInfo.id, channelInfo.title)}\n\n`;
     responseText += `📋 Требования:\n` + `${formatChannelRequirements(requirements)}`;
@@ -71,7 +71,7 @@ async function processChannelSelection(ctx: SessionContext, channelIdentifier: s
         responseText += `\n\n`;
 
         if (!requirements.foreignAgentBlurbConfigured) {
-            responseText += `*Следующий шаг:* Используйте \`${escapeMarkdown("/set_fa_blurb")} <ваш текст>\` для настройки текста иностранного агента\\. Только администраторы канала могут настраивать параметры\\.\n\n`;
+            responseText += `<b>Следующий шаг:</b> Используйте <code>${escapeHtml("/set_fa_blurb <ваш текст>")}</code> для настройки текста иностранного агента. Только администраторы канала могут настраивать параметры.\n\n`;
         }
 
         const keyboard = new Keyboard()
@@ -84,10 +84,10 @@ async function processChannelSelection(ctx: SessionContext, channelIdentifier: s
             .oneTime();
 
         ctx.session.awaitingChannelSelection = true;
-        await ctx.reply(responseText, { reply_markup: keyboard, parse_mode: "MarkdownV2" });
+        await ctx.reply(responseText, { reply_markup: keyboard, parse_mode: "HTML" });
     } else {
-        responseText += `\n\nОтправьте мне любое сообщение\\, чтобы проверить его\\.`;
-        await ctx.reply(responseText, { reply_markup: { remove_keyboard: true }, parse_mode: "MarkdownV2" });
+        responseText += `\n\nОтправьте мне любое сообщение, чтобы проверить его.`;
+        await ctx.reply(responseText, { reply_markup: { remove_keyboard: true }, parse_mode: "HTML" });
     }
 }
 
@@ -103,7 +103,7 @@ export function registerChannelCommands(): void {
         if (!args || typeof args !== "string" || args.trim() === "") {
             const { text, keyboard } = showChannelSelectionUI();
             ctx.session.awaitingChannelSelection = true;
-            return ctx.reply(text, { reply_markup: keyboard, parse_mode: "MarkdownV2" });
+            return ctx.reply(text, { reply_markup: keyboard, parse_mode: "HTML" });
         }
 
         const channelIdentifier = args.trim();
@@ -124,8 +124,8 @@ export function registerChannelCommands(): void {
         delete ctx.session.channelConfig;
 
         return ctx.reply(
-            "✅ Конфигурация канала успешно удалена\\.\n\nВаши сообщения больше не будут публиковаться ни в какой канал\\.",
-            { parse_mode: "MarkdownV2" },
+            "✅ Конфигурация канала успешно удалена.\n\nВаши сообщения больше не будут публиковаться ни в какой канал.",
+            { parse_mode: "HTML" },
         );
     });
 
