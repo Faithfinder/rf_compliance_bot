@@ -4,6 +4,7 @@ import { createSessionMiddleware } from "./config/session";
 import { initializeDatabase, closeDatabase } from "./db/database";
 import { commandDefinitions } from "./commands/definitions";
 import { registerNotificationUserSelectionHandler } from "./commands/notifications";
+import { registerDumpDbCommand } from "./commands/dump_db";
 import { registerMessageHandler } from "./handlers/message";
 import { registerErrorHandler } from "./handlers/error";
 
@@ -22,6 +23,7 @@ for (const cmd of commandDefinitions) {
     }
 }
 
+registerDumpDbCommand();
 registerNotificationUserSelectionHandler();
 registerMessageHandler();
 registerErrorHandler();
