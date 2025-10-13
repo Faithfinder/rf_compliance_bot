@@ -1,8 +1,9 @@
+import { FormattedString, b, code, fmt } from "@grammyjs/parse-mode";
 import { Keyboard } from "grammy";
 import { bot } from "../config/bot";
 import type { SessionContext } from "../config/session";
 import { addNotificationUser, removeNotificationUser, getNotificationUsers } from "../db/database";
-import { checkUserChannelPermissions, formatChannelInfo, resolveUserIdentifier, escapeHtml } from "../utils";
+import { checkUserChannelPermissions, formatChannelInfo, resolveUserIdentifier } from "../utils";
 
 interface ValidationResult {
     success: boolean;
@@ -43,7 +44,7 @@ async function validateNotificationAccess(
     const permissions = await checkUserChannelPermissions(channelConfig.channelId, userId);
 
     if (!permissions?.[requiredPermission]) {
-        await ctx.reply(permissionErrorMessages[requiredPermission], { parse_mode: "HTML" });
+        await ctx.reply(permissionErrorMessages[requiredPermission]);
         return { success: false };
     }
 
@@ -74,32 +75,37 @@ async function processUserOperation(
     const targetPermissions = await checkUserChannelPermissions(channelId, targetUserId);
 
     if (!targetPermissions?.isAdmin) {
-        return ctx.reply(
-            "❌ Только администраторы канала могут быть добавлены в список уведомлений.",
-            {
-                parse_mode: "HTML",
-            },
-        );
+        return ctx.reply("❌ Только администраторы канала могут быть добавлены в список уведомлений.");
     }
-
-    let message = "";
 
     if (operation === "add") {
         addNotificationUser(channelId, targetUserId);
 
-        message = `✅ Администратор успешно добавлен в список уведомлений!\n\n`;
-        message += `📢 <b>Канал:</b> ${formatChannelInfo(channelId, channelTitle)}\n`;
-        message += `🆔 <b>ID пользователя:</b> <code>${escapeHtml(String(targetUserId))}</code>\n\n`;
-        message += `Администратор будет получать уведомления, когда сообщения отклоняются из-за отсутствия текста иностранного агента.`;
+        const message = FormattedString.join(
+            [
+                "✅ Администратор успешно добавлен в список уведомлений!",
+                fmt`📢 ${fmt`${b}Канал:${b}`} ${formatChannelInfo(channelId, channelTitle)}`,
+                fmt`🆔 ${fmt`${b}ID пользователя:${b}`} ${fmt`${code}${String(targetUserId)}${code}`}`,
+                "Администратор будет получать уведомления, когда сообщения отклоняются из-за отсутствия текста иностранного агента.",
+            ],
+            "\n\n",
+        );
+        const entities = message.entities;
+        return ctx.reply(message.text, entities.length ? { entities } : undefined);
     } else {
         removeNotificationUser(channelId, targetUserId);
 
-        message = `✅ Администратор успешно удален из списка уведомлений!\n\n`;
-        message += `📢 <b>Канал:</b> ${formatChannelInfo(channelId, channelTitle)}\n`;
-        message += `🆔 <b>ID пользователя:</b> <code>${escapeHtml(String(targetUserId))}</code>`;
+        const message = FormattedString.join(
+            [
+                "✅ Администратор успешно удален из списка уведомлений!",
+                fmt`📢 ${fmt`${b}Канал:${b}`} ${formatChannelInfo(channelId, channelTitle)}`,
+                fmt`🆔 ${fmt`${b}ID пользователя:${b}`} ${fmt`${code}${String(targetUserId)}${code}`}`,
+            ],
+            "\n\n",
+        );
+        const entities = message.entities;
+        return ctx.reply(message.text, entities.length ? { entities } : undefined);
     }
-
-    return ctx.reply(message, { parse_mode: "HTML" });
 }
 
 async function handleUserSelection(
@@ -118,7 +124,7 @@ async function handleUserSelection(
 
         return ctx.reply(
             `👤 Пожалуйста, выберите администратора для ${action} ${preposition} списка уведомлений.`,
-            { reply_markup: keyboard, parse_mode: "HTML" },
+            { reply_markup: keyboard },
         );
     }
 
@@ -153,32 +159,34 @@ export function registerNotificationCommands(): void {
 
         const notificationUserIds = getNotificationUsers(validation.channelId);
 
-        let message = `🔔 <b>Список уведомлений</b>\n\n`;
-        message += `📢 <b>Канал:</b> ${formatChannelInfo(validation.channelId, validation.channelTitle)}\n\n`;
+        let message = fmt`🔔 ${fmt`${b}Список уведомлений${b}`}\n\n📢 ${fmt`${b}Канал:${b}`} ${formatChannelInfo(validation.channelId, validation.channelTitle)}\n\n`;
 
         if (notificationUserIds.length === 0) {
-            message += `Список пуст. Используйте ${escapeHtml("/notify_add")} для добавления администраторов.`;
+            message = fmt`${message}Список пуст. Используйте /notify_add для добавления администраторов.`;
         } else {
-            message += `👥 <b>Подписчики на уведомления:</b>\n`;
+            message = fmt`${message}👥 ${fmt`${b}Подписчики на уведомления:${b}`}\n`;
 
             for (const targetUserId of notificationUserIds) {
                 try {
                     const chatMember = await bot.api.getChatMember(validation.channelId, targetUserId);
                     const user = chatMember.user;
-                    message += `• ${escapeHtml(user.first_name)}`;
+                    let userLine = fmt`• ${user.first_name}`;
                     if (user.username) {
-                        message += ` (@${escapeHtml(user.username)})`;
+                        userLine = fmt`${userLine} (@${user.username})`;
                     }
-                    message += ` <code>${escapeHtml(String(targetUserId))}</code>\n`;
+                    userLine = fmt`${userLine} ${fmt`${code}${String(targetUserId)}${code}`}`;
+                    message = fmt`${message}${userLine}\n`;
                 } catch {
-                    message += `• ID: <code>${escapeHtml(String(targetUserId))}</code> (недоступен)\n`;
+                    const fallbackLine = fmt`• ID: ${fmt`${code}${String(targetUserId)}${code}`} (недоступен)`;
+                    message = fmt`${message}${fallbackLine}\n`;
                 }
             }
 
-            message += `\n<b>Всего:</b> ${notificationUserIds.length}`;
+            message = fmt`${message}\n${fmt`${b}Всего:${b}`} ${notificationUserIds.length}`;
         }
 
-        return ctx.reply(message, { parse_mode: "HTML" });
+        const entities = message.entities;
+        return ctx.reply(message.text, entities.length ? { entities } : undefined);
     });
 }
 

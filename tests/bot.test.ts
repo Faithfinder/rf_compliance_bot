@@ -12,14 +12,18 @@ describe("Utility Functions", () => {
         const channelTitle = "Test Channel";
 
         const formatted = formatChannelInfo(channelId, channelTitle);
-        expect(formatted).toBe("Test Channel (<code>-1001234567890</code>)");
+        expect(formatted.text).toBe("Test Channel (-1001234567890)");
+        expect(formatted.entities).toEqual([
+            { type: "code", offset: 14, length: 14 },
+        ]);
     });
 
     test("should format channel info without title", () => {
         const channelId = "-1001234567890";
 
         const formatted = formatChannelInfo(channelId);
-        expect(formatted).toBe("<code>-1001234567890</code>");
+        expect(formatted.text).toBe("-1001234567890");
+        expect(formatted.entities).toEqual([{ type: "code", offset: 0, length: 14 }]);
     });
 
     test("should handle empty title", () => {
@@ -27,7 +31,8 @@ describe("Utility Functions", () => {
         const channelTitle = "";
 
         const formatted = formatChannelInfo(channelId, channelTitle);
-        expect(formatted).toBe("<code>-1001234567890</code>");
+        expect(formatted.text).toBe("-1001234567890");
+        expect(formatted.entities).toEqual([{ type: "code", offset: 0, length: 14 }]);
     });
 
     test("should format channel requirements with all checks passed", () => {

@@ -10,6 +10,6 @@ export function registerHelpCommand(): void {
 
         const helpMessage = `Доступные команды:\n\n${commandList}`;
 
-        return ctx.reply(helpMessage, { parse_mode: "HTML" });
+        return ctx.reply(helpMessage);
     });
 }

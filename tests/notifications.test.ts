@@ -29,14 +29,16 @@ describe("Rejection notifications", () => {
             occurredAt: timestamp,
         });
 
-        expect(message).toContain("🚫 <b>Сообщение отклонено</b>");
-        expect(message).toContain("Test Channel (<code>-1001234567890</code>)");
-        expect(message).toContain("👤 <b>Пользователь:</b> Moderator (@moderator)");
-        expect(message).toContain("🆔 <b>ID:</b> <code>42</code>");
-        expect(message).toContain(
-            `❌ <b>Причина:</b> ${rejectionModule.FOREIGN_AGENT_REJECTION_REASON}`,
+        expect(message.text).toContain("🚫 Сообщение отклонено");
+        expect(message.text).toContain("Test Channel (-1001234567890)");
+        expect(message.text).toContain("👤 Пользователь: Moderator (@moderator)");
+        expect(message.text).toContain("🆔 ID: 42");
+        expect(message.text).toContain(
+            `❌ Причина: ${rejectionModule.FOREIGN_AGENT_REJECTION_REASON}`,
         );
-        expect(message).toContain("📝 <b>Отклоненное сообщение:</b>");
+        expect(message.text).toContain("📝 Отклоненное сообщение:");
+        expect(message.entities?.some((entity) => entity.type === "bold")).toBe(true);
+        expect(message.entities?.some((entity) => entity.type === "code")).toBe(true);
     });
 
     test("buildRejectionNotificationMessage omits ID when actor id is unavailable", () => {
@@ -49,8 +51,8 @@ describe("Rejection notifications", () => {
             },
         });
 
-        expect(message).toContain("Signed Author");
-        expect(message).not.toContain("🆔 <b>ID:</b>");
+        expect(message.text).toContain("Signed Author");
+        expect(message.text).not.toContain("🆔 ID:");
     });
 
     test("dispatchRejectionNotifications notifies author when available and filters duplicates", async () => {

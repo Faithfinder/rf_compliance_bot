@@ -1,4 +1,5 @@
 import { Keyboard } from "grammy";
+import { FormattedString, b, fmt } from "@grammyjs/parse-mode";
 import { bot } from "../config/bot";
 import type { SessionContext } from "../config/session";
 import {
@@ -7,7 +8,6 @@ import {
     checkChannelRequirements,
     formatChannelRequirements,
     allRequirementsPassed,
-    escapeHtml,
 } from "../utils";
 
 export function showChannelSelectionUI(errorMessage?: string): { text: string; keyboard: Keyboard } {
@@ -21,15 +21,15 @@ export function showChannelSelectionUI(errorMessage?: string): { text: string; k
 
     const baseText = [
         "Пожалуйста, выберите канал из кнопки ниже или используйте:",
-        escapeHtml("/setchannel <@channel или ID>"),
+        "/setchannel <@channel или ID>",
         "",
-        `Пример: ${escapeHtml("/setchannel @mychannel")}`,
+        "Пример: /setchannel @mychannel",
     ].join("\n");
 
     let text = baseText;
 
     if (errorMessage) {
-        text = `❌ ${escapeHtml(errorMessage)}\n\n${text}`;
+        text = `❌ ${errorMessage}\n\n${text}`;
     }
 
     return { text, keyboard };
@@ -47,7 +47,7 @@ async function processChannelSelection(ctx: SessionContext, channelIdentifier: s
             "Не удается найти или получить доступ к этому каналу. Убедитесь, что бот был добавлен в канал в качестве администратора.";
         const { text, keyboard } = showChannelSelectionUI(errorMessage);
         ctx.session.awaitingChannelSelection = true;
-        await ctx.reply(text, { reply_markup: keyboard, parse_mode: "HTML" });
+        await ctx.reply(text, { reply_markup: keyboard });
         return;
     }
 
@@ -62,16 +62,24 @@ async function processChannelSelection(ctx: SessionContext, channelIdentifier: s
 
     await bot.api.deleteMessage(chatId, workingMsg.message_id).catch(() => {});
 
-    let responseText = `✅ Канал настроен!\n\n`;
-    responseText +=
-        `Ваши сообщения теперь будут публиковаться в: ` + `${formatChannelInfo(channelInfo.id, channelInfo.title)}\n\n`;
-    responseText += `📋 Требования:\n` + `${formatChannelRequirements(requirements)}`;
+    const sections: Array<string | FormattedString> = [
+        "✅ Канал настроен!",
+        fmt`Ваши сообщения теперь будут публиковаться в: ${formatChannelInfo(channelInfo.id, channelInfo.title)}`,
+        fmt`📋 Требования:\n${formatChannelRequirements(requirements)}`,
+    ];
+
+    let responseMessage = FormattedString.join(sections, "\n\n");
 
     if (!allRequirementsPassed(requirements)) {
-        responseText += `\n\n`;
-
+        const additional: Array<string | FormattedString> = [];
         if (!requirements.foreignAgentBlurbConfigured) {
-            responseText += `<b>Следующий шаг:</b> Используйте ${escapeHtml("/set_fa_blurb <ваш текст>")} для настройки текста иностранного агента. Только администраторы канала могут настраивать параметры.\n\n`;
+            additional.push(
+                fmt`${fmt`${b}Следующий шаг:${b}`} Используйте /set_fa_blurb <ваш текст> для настройки текста иностранного агента. Только администраторы канала могут настраивать параметры.`,
+            );
+        }
+
+        if (additional.length > 0) {
+            responseMessage = FormattedString.join([responseMessage, FormattedString.join(additional, "\n\n")], "\n\n");
         }
 
         const keyboard = new Keyboard()
@@ -84,10 +92,21 @@ async function processChannelSelection(ctx: SessionContext, channelIdentifier: s
             .oneTime();
 
         ctx.session.awaitingChannelSelection = true;
-        await ctx.reply(responseText, { reply_markup: keyboard, parse_mode: "HTML" });
+        const entities = responseMessage.entities;
+        await ctx.reply(responseMessage.text, {
+            reply_markup: keyboard,
+            ...(entities.length ? { entities } : {}),
+        });
     } else {
-        responseText += `\n\nОтправьте мне любое сообщение, чтобы проверить его.`;
-        await ctx.reply(responseText, { reply_markup: { remove_keyboard: true }, parse_mode: "HTML" });
+        responseMessage = FormattedString.join(
+            [responseMessage, "Отправьте мне любое сообщение, чтобы проверить его."],
+            "\n\n",
+        );
+        const entities = responseMessage.entities;
+        await ctx.reply(responseMessage.text, {
+            reply_markup: { remove_keyboard: true },
+            ...(entities.length ? { entities } : {}),
+        });
     }
 }
 
@@ -103,7 +122,7 @@ export function registerChannelCommands(): void {
         if (!args || typeof args !== "string" || args.trim() === "") {
             const { text, keyboard } = showChannelSelectionUI();
             ctx.session.awaitingChannelSelection = true;
-            return ctx.reply(text, { reply_markup: keyboard, parse_mode: "HTML" });
+            return ctx.reply(text, { reply_markup: keyboard });
         }
 
         const channelIdentifier = args.trim();
@@ -125,7 +144,6 @@ export function registerChannelCommands(): void {
 
         return ctx.reply(
             "✅ Конфигурация канала успешно удалена.\n\nВаши сообщения больше не будут публиковаться ни в какой канал.",
-            { parse_mode: "HTML" },
         );
     });
 

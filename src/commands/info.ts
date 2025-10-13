@@ -1,10 +1,10 @@
+import { FormattedString, b, code, fmt } from "@grammyjs/parse-mode";
 import { bot } from "../config/bot";
 import {
     checkChannelRequirements,
     formatChannelRequirements,
     checkUserChannelPermissions,
     formatChannelInfo,
-    escapeHtml,
 } from "../utils";
 import { getChannelSettings } from "../db/database";
 import { isFixedChannelMode } from "../config/environment";
@@ -19,67 +19,82 @@ export function registerInfoCommand(): void {
 
         const channelConfig = ctx.session.channelConfig;
 
-        let infoMessage = "🤖 <b>Конфигурация бота</b>\n\n";
-        infoMessage += `👤 <b>Пользователь:</b> ${escapeHtml(ctx.from.first_name)}`;
-        if (ctx.from.username) {
-            infoMessage += ` (@${escapeHtml(ctx.from.username)})`;
-        }
-        infoMessage += `\n📱 <b>ID пользователя:</b> <code>${escapeHtml(String(userId))}</code>\n\n`;
+        const sections: Array<string | FormattedString> = [];
+
+        sections.push(fmt`🤖 ${fmt`${b}Конфигурация бота${b}`}`);
+
+        const usernamePart =
+            ctx.from.username ?
+                fmt` (@${ctx.from.username})`
+            : undefined;
+        const userLine = usernamePart ?
+            fmt`👤 ${fmt`${b}Пользователь:${b}`} ${ctx.from.first_name}${usernamePart}`
+        :   fmt`👤 ${fmt`${b}Пользователь:${b}`} ${ctx.from.first_name}`;
+        const userIdLine = fmt`📱 ${fmt`${b}ID пользователя:${b}`} ${fmt`${code}${String(userId)}${code}`}`;
+        sections.push(FormattedString.join([userLine, userIdLine], "\n"));
 
         if (channelConfig) {
-            infoMessage += `📢 <b>Настроенный канал:</b>\n`;
-            infoMessage += `${formatChannelInfo(channelConfig.channelId, channelConfig.channelTitle)}\n`;
+            let channelSection = fmt`📢 ${fmt`${b}Настроенный канал:${b}`}\n${formatChannelInfo(channelConfig.channelId, channelConfig.channelTitle)}`;
             if (isFixedChannelMode()) {
-                infoMessage += `🔒 Фиксированный канал (установлен администратором)\n`;
+                channelSection = fmt`${channelSection}\n🔒 Фиксированный канал (установлен администратором)`;
             }
-            infoMessage += `\n`;
+            sections.push(channelSection);
 
             const requirements = await checkChannelRequirements(channelConfig.channelId);
 
-            infoMessage += `📋 <b>Требования:</b>\n`;
-            infoMessage += `${formatChannelRequirements(requirements)}\n\n`;
+            sections.push(fmt`📋 ${fmt`${b}Требования:${b}`}\n${formatChannelRequirements(requirements)}`);
 
             const channelSettings = getChannelSettings(channelConfig.channelId);
 
             if (channelSettings?.foreignAgentBlurb) {
-                infoMessage += `⚙️ <b>Настройки канала:</b>\n`;
-                infoMessage += `🌍 <b>Текст иностранного агента:</b>\n${escapeHtml(channelSettings.foreignAgentBlurb)}\n\n`;
+                const settingsSection = fmt`⚙️ ${fmt`${b}Настройки канала:${b}`}\n🌍 ${fmt`${b}Текст иностранного агента:${b}`}\n${channelSettings.foreignAgentBlurb}`;
+                sections.push(settingsSection);
             }
 
             const userPermissions = await checkUserChannelPermissions(channelConfig.channelId, userId);
 
             if (userPermissions) {
-                infoMessage += `👤 <b>Ваши разрешения:</b>\n`;
-
-                if (userPermissions.isMember) {
-                    infoMessage += `✅ Участник канала\n`;
-                } else {
-                    infoMessage += `❌ Не является участником канала\n`;
-                }
+                const permissionLines: Array<string | FormattedString> = [
+                    fmt`👤 ${fmt`${b}Ваши разрешения:${b}`}`,
+                    userPermissions.isMember ? "✅ Участник канала" : "❌ Не является участником канала",
+                ];
 
                 if (userPermissions.isAdmin) {
-                    infoMessage += `✅ Администратор\n`;
-                    if (userPermissions.canPostMessages)
-                        infoMessage += `⚠️ Может публиковать сообщения (Это право следует убрать, чтобы предотвратить обход бота)\n`;
-                    if (userPermissions.canEditMessages) infoMessage += `✅ Может редактировать сообщения\n`;
-                    if (userPermissions.canManageChat) infoMessage += `✅ Может управлять чатом\n`;
+                    permissionLines.push("✅ Администратор");
+                    if (userPermissions.canPostMessages) {
+                        permissionLines.push(
+                            "⚠️ Может публиковать сообщения (Это право следует убрать, чтобы предотвратить обход бота)",
+                        );
+                    }
+                    if (userPermissions.canEditMessages) {
+                        permissionLines.push("✅ Может редактировать сообщения");
+                    }
+                    if (userPermissions.canManageChat) {
+                        permissionLines.push("✅ Может управлять чатом");
+                    }
                 } else {
-                    infoMessage += `❌ Не является администратором\n`;
+                    permissionLines.push("❌ Не является администратором");
                 }
-                infoMessage += `\n`;
+
+                sections.push(FormattedString.join(permissionLines, "\n"));
             }
 
             if (!isFixedChannelMode()) {
-                infoMessage += `Используйте ${escapeHtml("/removechannel")} для удаления этой конфигурации`;
+                sections.push("Используйте /removechannel для удаления этой конфигурации");
             }
         } else {
-            infoMessage += `📢 <b>Настроенный канал:</b> Нет\n\n`;
-            infoMessage += `❌ Канал не настроен\n`;
+            const channelLines: Array<string | FormattedString> = [
+                fmt`📢 ${fmt`${b}Настроенный канал:${b}`} Нет`,
+                "❌ Канал не настроен",
+            ];
             if (!isFixedChannelMode()) {
-                infoMessage += `Используйте ${escapeHtml("/setchannel")} для настройки`;
+                channelLines.push("Используйте /setchannel для настройки");
             }
+            sections.push(FormattedString.join(channelLines, "\n"));
         }
 
-        return ctx.reply(infoMessage, { parse_mode: "HTML" });
+        const infoMessage = FormattedString.join(sections, "\n\n");
+        const entities = infoMessage.entities;
+        return ctx.reply(infoMessage.text, entities.length ? { entities } : undefined);
     });
 }

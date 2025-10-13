@@ -1,6 +1,7 @@
+import { b, fmt, i } from "@grammyjs/parse-mode";
 import { bot } from "../config/bot";
 import { getChannelSettings, updateChannelSettings } from "../db/database";
-import { checkUserChannelPermissions, formatChannelInfo, escapeHtml } from "../utils";
+import { checkUserChannelPermissions, formatChannelInfo } from "../utils";
 
 export function registerSettingsCommand(): void {
     bot.command("set_fa_blurb", async (ctx) => {
@@ -26,20 +27,18 @@ export function registerSettingsCommand(): void {
         if (isViewMode) {
             const channelSettings = getChannelSettings(channelConfig.channelId);
 
-            let message = `⚙️ <b>Настройки канала</b>\n\n`;
-            message += `📢 <b>Канал:</b> ${formatChannelInfo(channelConfig.channelId, channelConfig.channelTitle)}\n\n`;
-            message += `🌍 <b>Текст иностранного агента:</b>\n`;
+            let message = fmt`⚙️ ${fmt`${b}Настройки канала${b}`}\n\n📢 ${fmt`${b}Канал:${b}`} ${formatChannelInfo(channelConfig.channelId, channelConfig.channelTitle)}\n\n🌍 ${fmt`${b}Текст иностранного агента:${b}`}\n`;
 
             if (channelSettings?.foreignAgentBlurb) {
-                message += `${escapeHtml(channelSettings.foreignAgentBlurb)}\n\n`;
+                message = fmt`${message}${channelSettings.foreignAgentBlurb}\n\n`;
             } else {
-                message += `<i>Не настроено</i>\n\n`;
+                message = fmt`${message}${fmt`${i}Не настроено${i}`}\n\n`;
             }
 
-            message += `Чтобы обновить текст иностранного агента, используйте:\n`;
-            message += escapeHtml("/set_fa_blurb <ваш текст>");
+            message = fmt`${message}Чтобы обновить текст иностранного агента, используйте:\n/set_fa_blurb <ваш текст>`;
 
-            return ctx.reply(message, { parse_mode: "HTML" });
+            const entities = message.entities;
+            return ctx.reply(message.text, entities.length ? { entities } : undefined);
         }
 
         const permissions = await checkUserChannelPermissions(channelConfig.channelId, userId);
@@ -59,10 +58,10 @@ export function registerSettingsCommand(): void {
 
         updateChannelSettings(channelConfig.channelId, { foreignAgentBlurb: newBlurb });
 
-        let confirmMessage = `✅ Текст иностранного агента успешно обновлен!\n\n`;
-        confirmMessage += `📢 <b>Канал:</b> ${formatChannelInfo(channelConfig.channelId, channelConfig.channelTitle)}\n\n`;
-        confirmMessage += `🌍 <b>Новый текст иностранного агента:</b>\n` + escapeHtml(newBlurb);
+        let confirmMessage = fmt`✅ Текст иностранного агента успешно обновлен!\n\n📢 ${fmt`${b}Канал:${b}`} ${formatChannelInfo(channelConfig.channelId, channelConfig.channelTitle)}\n\n🌍 ${fmt`${b}Новый текст иностранного агента:${b}`}\n`;
+        confirmMessage = fmt`${confirmMessage}${newBlurb}`;
 
-        return ctx.reply(confirmMessage, { parse_mode: "HTML" });
+        const entities = confirmMessage.entities;
+        return ctx.reply(confirmMessage.text, entities.length ? { entities } : undefined);
     });
 }

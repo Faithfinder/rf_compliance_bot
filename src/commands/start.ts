@@ -1,7 +1,8 @@
+import { fmt } from "@grammyjs/parse-mode";
 import { bot } from "../config/bot";
 import type { SessionContext } from "../config/session";
 import { showChannelSelectionUI } from "./channel";
-import { formatChannelInfo, escapeHtml } from "../utils";
+import { formatChannelInfo } from "../utils";
 
 export function registerStartCommand(): void {
     bot.command("start", async (ctx: SessionContext) => {
@@ -19,7 +20,6 @@ export function registerStartCommand(): void {
                 text;
             return ctx.reply(setupPrompt, {
                 reply_markup: keyboard,
-                parse_mode: "HTML",
             });
         }
 
@@ -28,11 +28,8 @@ export function registerStartCommand(): void {
             ctx.session.channelConfig.channelTitle,
         );
 
-        return ctx.reply(
-            `${escapeHtml(welcomeMessage)}\n\n` +
-                `✅ Ваш канал настроен: ${channelInfo}\n\n` +
-                `Используйте ${escapeHtml("/help")} для просмотра доступных команд.`,
-            { parse_mode: "HTML" },
-        );
+        const message = fmt`${welcomeMessage}\n\n✅ Ваш канал настроен: ${channelInfo}\n\nИспользуйте /help для просмотра доступных команд.`;
+        const entities = message.entities;
+        return ctx.reply(message.text, entities.length ? { entities } : undefined);
     });
 }

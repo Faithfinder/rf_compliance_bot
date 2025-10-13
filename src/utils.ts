@@ -1,23 +1,10 @@
+import { FormattedString, code, fmt } from "@grammyjs/parse-mode";
 import { bot } from "./config/bot";
 import { getChannelSettings } from "./db/database";
 
 interface ChannelInfo {
     id: string;
     title: string;
-}
-
-/**
- * Escapes special characters in text for HTML formatting
- * @param text The text to escape
- * @returns Escaped text safe for inclusion in HTML messages
- */
-export function escapeHtml(text: string): string {
-    return text
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#39;");
 }
 
 /**
@@ -62,12 +49,11 @@ export async function resolveChannel(identifier: string): Promise<ChannelInfo | 
  * @param channelTitle Optional channel title
  * @returns Formatted string for display
  */
-export function formatChannelInfo(channelId: string, channelTitle?: string): string {
-    const escapedId = escapeHtml(channelId);
-    const idWithCode = `<code>${escapedId}</code>`;
+export function formatChannelInfo(channelId: string, channelTitle?: string): FormattedString {
+    const idWithCode = fmt`${code}${channelId}${code}`;
 
     if (channelTitle) {
-        return `${escapeHtml(channelTitle)} (${idWithCode})`;
+        return fmt`${channelTitle} (${idWithCode})`;
     }
 
     return idWithCode;

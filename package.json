@@ -25,6 +25,7 @@
     "typescript": "^5"
   },
   "dependencies": {
+    "@grammyjs/parse-mode": "^2.2.0",
     "@sentry/bun": "^10.17.0",
     "grammy": "^1.38.2"
   }

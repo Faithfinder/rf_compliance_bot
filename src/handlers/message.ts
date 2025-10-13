@@ -1,4 +1,5 @@
 import * as Sentry from "@sentry/bun";
+import { b, fmt } from "@grammyjs/parse-mode";
 import { Keyboard } from "grammy";
 import { bot } from "../config/bot";
 import {
@@ -6,7 +7,6 @@ import {
     checkChannelRequirements,
     formatChannelRequirements,
     checkUserChannelPermissions,
-    escapeHtml,
 } from "../utils";
 import { getChannelSettings } from "../db/database";
 import { dispatchRejectionNotifications } from "../notifications/rejection";
@@ -45,16 +45,11 @@ export function registerMessageHandler(): void {
         if (!foreignAgentBlurb) {
             const requirements = await checkChannelRequirements(channelConfig.channelId);
 
-            let errorMessage =
-                `❌ Невозможно опубликовать сообщение: Блурб иностранного агента не настроен для ` +
-                `${formatChannelInfo(channelConfig.channelId, channelConfig.channelTitle)}\n\n`;
-            errorMessage += `📋 Требования:\n` + `${formatChannelRequirements(requirements)}\n\n`;
-            errorMessage += `<b>Следующий шаг:</b> Используйте ${escapeHtml(
-                "/set_fa_blurb <ваш текст>",
-            )} для настройки текста иностранного агента для этого канала.\n\n`;
-            errorMessage += `Только администраторы канала могут настраивать параметры.`;
+            let errorMessage = fmt`❌ Невозможно опубликовать сообщение: Блурб иностранного агента не настроен для ${formatChannelInfo(channelConfig.channelId, channelConfig.channelTitle)}\n\n📋 Требования:\n${formatChannelRequirements(requirements)}\n\n`;
+            errorMessage = fmt`${errorMessage}${fmt`${b}Следующий шаг:${b}`} Используйте /set_fa_blurb <ваш текст> для настройки текста иностранного агента для этого канала.\n\nТолько администраторы канала могут настраивать параметры.`;
 
-            return ctx.reply(errorMessage, { parse_mode: "HTML" });
+            const entities = errorMessage.entities;
+            return ctx.reply(errorMessage.text, entities.length ? { entities } : undefined);
         }
 
         const messageText = ctx.message.text || ctx.message.caption;
@@ -79,23 +74,23 @@ export function registerMessageHandler(): void {
                 );
             }
 
-            let errorMessage = `❌ Невозможно опубликовать сообщение: Ваше сообщение должно содержать текст иностранного агента.\n\n`;
-            errorMessage += `🌍 <b>Необходимый текст:</b>\n` + `${escapeHtml(foreignAgentBlurb)}\n\n`;
-            errorMessage += `Пожалуйста, добавьте этот текст к вашему сообщению и повторите попытку.\n`;
-            errorMessage += `Оригинальное сообщение:`;
+            let errorMessage = fmt`❌ Невозможно опубликовать сообщение: Ваше сообщение должно содержать текст иностранного агента.\n\n🌍 ${fmt`${b}Необходимый текст:${b}`}\n${foreignAgentBlurb}\n\nПожалуйста, добавьте этот текст к вашему сообщению и повторите попытку.\nОригинальное сообщение:`;
 
             await ctx.api.copyMessage(ctx.chat.id, ctx.chat.id, ctx.message.message_id);
 
-            return await ctx.reply(errorMessage, { parse_mode: "HTML" });
+            const entities = errorMessage.entities;
+            return await ctx.reply(errorMessage.text, entities.length ? { entities } : undefined);
         }
 
         try {
             await ctx.api.copyMessage(channelConfig.channelId, ctx.chat.id, ctx.message.message_id);
 
-            return ctx.reply(
-                `✅ Сообщение опубликовано в ` + formatChannelInfo(channelConfig.channelId, channelConfig.channelTitle),
-                { parse_mode: "HTML" },
-            );
+            const successMessage = fmt`✅ Сообщение опубликовано в ${formatChannelInfo(
+                channelConfig.channelId,
+                channelConfig.channelTitle,
+            )}`;
+            const entities = successMessage.entities;
+            return ctx.reply(successMessage.text, entities.length ? { entities } : undefined);
         } catch (error) {
             console.error("Error posting to channel:", error);
 
@@ -111,14 +106,10 @@ export function registerMessageHandler(): void {
 
             const requirements = await checkChannelRequirements(channelConfig.channelId);
 
-            let errorMessage =
-                `❌ Не удалось опубликовать сообщение в ` +
-                `${formatChannelInfo(channelConfig.channelId, channelConfig.channelTitle)}\n\n`;
-            errorMessage += `📋 Требования:\n` + `${formatChannelRequirements(requirements)}\n\n`;
+            let errorMessage = fmt`❌ Не удалось опубликовать сообщение в ${formatChannelInfo(channelConfig.channelId, channelConfig.channelTitle)}\n\n📋 Требования:\n${formatChannelRequirements(requirements)}\n\n`;
 
             if (!requirements.channelExists) {
-                errorMessage +=
-                    "<b>Следующий шаг:</b> Канал больше не существует или бот не может получить к нему доступ. Пожалуйста, выберите другой канал.";
+                errorMessage = fmt`${errorMessage}${fmt`${b}Следующий шаг:${b}`} Канал больше не существует или бот не может получить к нему доступ. Пожалуйста, выберите другой канал.`;
 
                 const keyboard = new Keyboard()
                     .requestChat("Выбрать другой канал", 1, {
@@ -130,18 +121,21 @@ export function registerMessageHandler(): void {
                     .oneTime();
 
                 ctx.session.awaitingChannelSelection = true;
-                return ctx.reply(errorMessage, { reply_markup: keyboard, parse_mode: "HTML" });
+                const entities = errorMessage.entities;
+                return ctx.reply(errorMessage.text, {
+                    reply_markup: keyboard,
+                    ...(entities.length ? { entities } : {}),
+                });
             } else if (!requirements.botIsAdded) {
-                errorMessage +=
-                    '<b>Следующий шаг:</b> Попросите администратора канала добавить этого бота в качестве администратора в канал.';
+                errorMessage = fmt`${errorMessage}${fmt`${b}Следующий шаг:${b}`} Попросите администратора канала добавить этого бота в качестве администратора в канал.`;
             } else if (!requirements.botCanPost) {
-                errorMessage +=
-                    '<b>Следующий шаг:</b> Попросите администратора канала предоставить боту разрешение "Публиковать сообщения".';
+                errorMessage = fmt`${errorMessage}${fmt`${b}Следующий шаг:${b}`} Попросите администратора канала предоставить боту разрешение "Публиковать сообщения".`;
             }
 
-            errorMessage += `\n\nИли используйте ${escapeHtml("/setchannel")} для настройки другого канала`;
+            errorMessage = fmt`${errorMessage}\n\nИли используйте /setchannel для настройки другого канала`;
 
-            return ctx.reply(errorMessage, { parse_mode: "HTML" });
+            const entities = errorMessage.entities;
+            return ctx.reply(errorMessage.text, entities.length ? { entities } : undefined);
         }
     });
 

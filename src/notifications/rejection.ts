@@ -1,7 +1,8 @@
 import * as Sentry from "@sentry/bun";
+import { FormattedString, b, code, fmt } from "@grammyjs/parse-mode";
 import { bot } from "../config/bot";
 import { getNotificationUsers } from "../db/database";
-import { escapeHtml, formatChannelInfo } from "../utils";
+import { formatChannelInfo } from "../utils";
 
 export const FOREIGN_AGENT_REJECTION_REASON = "Отсутствует текст иностранного агента";
 
@@ -28,7 +29,7 @@ interface NotificationTarget {
     scope: "author" | "notify";
 }
 
-export function buildRejectionNotificationMessage(params: RejectionNotificationParams): string {
+export function buildRejectionNotificationMessage(params: RejectionNotificationParams): FormattedString {
     const timestamp = (params.occurredAt ?? new Date()).toLocaleString("ru-RU", {
         timeZone: "Europe/Moscow",
         year: "numeric",
@@ -40,23 +41,20 @@ export function buildRejectionNotificationMessage(params: RejectionNotificationP
 
     const channelInfo = formatChannelInfo(params.channelId, params.channelTitle);
 
-    let message = `🚫 <b>Сообщение отклонено</b>\n\n`;
-    message += `📢 <b>Канал:</b> ${channelInfo}\n`;
+    let message = fmt`🚫 ${fmt`${b}Сообщение отклонено${b}`}\n\n📢 ${fmt`${b}Канал:${b}`} ${channelInfo}\n`;
 
     if (params.actor) {
-        message += `👤 <b>Пользователь:</b> ${escapeHtml(params.actor.displayName)}`;
+        let actorLine = fmt`👤 ${fmt`${b}Пользователь:${b}`} ${params.actor.displayName}`;
         if (params.actor.username) {
-            message += ` (@${escapeHtml(params.actor.username)})`;
+            actorLine = fmt`${actorLine} (@${params.actor.username})`;
         }
         if (typeof params.actor.id === "number") {
-            message += `\n🆔 <b>ID:</b> <code>${escapeHtml(String(params.actor.id))}</code>`;
+            actorLine = fmt`${actorLine}\n🆔 ${fmt`${b}ID:${b}`} ${fmt`${code}${String(params.actor.id)}${code}`}`;
         }
-        message += `\n`;
+        message = fmt`${message}${actorLine}\n`;
     }
 
-    message += `🕐 <b>Время:</b> ${escapeHtml(timestamp)}\n\n`;
-    message += `❌ <b>Причина:</b> ${escapeHtml(FOREIGN_AGENT_REJECTION_REASON)}\n\n`;
-    message += `📝 <b>Отклоненное сообщение:</b>`;
+    message = fmt`${message}🕐 ${fmt`${b}Время:${b}`} ${timestamp}\n\n❌ ${fmt`${b}Причина:${b}`} ${FOREIGN_AGENT_REJECTION_REASON}\n\n📝 ${fmt`${b}Отклоненное сообщение:${b}`}`;
 
     return message;
 }
@@ -71,6 +69,8 @@ export async function dispatchRejectionNotifications(
     params: RejectionNotificationParams,
 ): Promise<RejectionNotificationResult> {
     const notificationMessage = buildRejectionNotificationMessage(params);
+    const notificationText = notificationMessage.text;
+    const notificationEntities = notificationMessage.entities;
 
     const notificationUserIds = params.notificationUserIds ?? getNotificationUsers(params.channelId);
     const excluded = new Set<number>(params.excludeUserIds ?? []);
@@ -109,7 +109,11 @@ export async function dispatchRejectionNotifications(
 
     for (const target of targets) {
         try {
-            await bot.api.sendMessage(target.userId, notificationMessage, { parse_mode: "HTML" });
+            await bot.api.sendMessage(
+                target.userId,
+                notificationText,
+                notificationEntities.length ? { entities: notificationEntities } : undefined,
+            );
             await bot.api.copyMessage(target.userId, params.rejectedMessageChatId, params.rejectedMessageId);
             successfulTargets += 1;
         } catch (error) {
