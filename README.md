@@ -59,6 +59,16 @@ rf-compliance-bot/
 
 - `/start` - Start the bot and see welcome message
 - `/help` - Show available commands
+- `/set_fa_blurb` - Configure the foreign-agent disclosure for the current channel
+- `/notify_add`, `/notify_remove`, `/notify_list` - Maintain the admins that receive moderation notifications
+
+## Channel Moderation
+
+- The bot listens to posts that appear directly in a configured channel. If the text or caption does not contain the configured foreign-agent blurb, the bot copies the offending message to the notification list, attempts to DM the author, and removes the post from the channel.
+- Make sure the blurb is configured with `/set_fa_blurb` for every moderated channel; otherwise the compliance check is skipped.
+- Grant the bot administrator rights with **Post Messages** and **Delete Messages** so it can remove non-compliant posts and deliver notifications.
+- Use `/notify_add` to enlist channel administrators who should be notified when a message is rejected. The bot will exclude the posting user from the fan-out to avoid duplicate notifications.
+- Telegram only includes the author ID for certain channel posts. When that identifier is unavailable, the bot still removes the message and notifies the subscribed administrators.
 
 ## Testing
 

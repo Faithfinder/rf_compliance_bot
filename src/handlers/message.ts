@@ -8,65 +8,8 @@ import {
     checkUserChannelPermissions,
     escapeHtml,
 } from "../utils";
-import { getChannelSettings, getNotificationUsers } from "../db/database";
-
-async function sendRejectionNotification(
-    channelId: string,
-    channelTitle: string | undefined,
-    rejectedUserId: number,
-    rejectedUserFirstName: string,
-    rejectedUserHandle: string | undefined,
-    rejectedMessageChatId: number,
-    rejectedMessageId: number,
-): Promise<void> {
-    const notificationUserIds = getNotificationUsers(channelId).filter((id) => id !== rejectedUserId);
-
-    if (notificationUserIds.length === 0) {
-        return;
-    }
-
-    const timestamp = new Date().toLocaleString("ru-RU", {
-        timeZone: "Europe/Moscow",
-        year: "numeric",
-        month: "2-digit",
-        day: "2-digit",
-        hour: "2-digit",
-        minute: "2-digit",
-    });
-
-    let notificationMessage = `🚫 <b>Сообщение отклонено</b>\n\n`;
-    notificationMessage += `📢 <b>Канал:</b> ${formatChannelInfo(channelId, channelTitle)}\n`;
-    notificationMessage += `👤 <b>Пользователь:</b> ${escapeHtml(rejectedUserFirstName)}`;
-    if (rejectedUserHandle) {
-        notificationMessage += ` (@${escapeHtml(rejectedUserHandle)})`;
-    }
-    notificationMessage += `\n🆔 <b>ID:</b> <code>${escapeHtml(String(rejectedUserId))}</code>\n`;
-    notificationMessage += `🕐 <b>Время:</b> ${escapeHtml(timestamp)}\n\n`;
-    notificationMessage += `❌ <b>Причина:</b> Отсутствует текст иностранного агента\n\n`;
-    notificationMessage += `📝 <b>Отклоненное сообщение:</b>`;
-
-    for (const notifyUserId of notificationUserIds) {
-        try {
-            await bot.api.sendMessage(notifyUserId, notificationMessage, {
-                parse_mode: "HTML",
-            });
-
-            await bot.api.copyMessage(notifyUserId, rejectedMessageChatId, rejectedMessageId);
-        } catch (error) {
-            console.error(`Failed to send notification to user ${notifyUserId}:`, error);
-
-            Sentry.withScope((scope) => {
-                scope.setContext("notification_failure", {
-                    channel_id: channelId,
-                    notify_user_id: notifyUserId,
-                    rejected_user_id: rejectedUserId,
-                });
-                scope.setTag("error_type", "notification_send_failed");
-                Sentry.captureException(error);
-            });
-        }
-    }
-}
+import { getChannelSettings } from "../db/database";
+import { dispatchRejectionNotifications } from "../notifications/rejection";
 
 export function registerMessageHandler(): void {
     bot.chatType("private").on("message", async (ctx) => {
@@ -117,15 +60,24 @@ export function registerMessageHandler(): void {
         const messageText = ctx.message.text || ctx.message.caption;
 
         if (!messageText || !messageText.includes(foreignAgentBlurb)) {
-            await sendRejectionNotification(
-                channelConfig.channelId,
-                channelConfig.channelTitle,
-                userId,
-                ctx.from.first_name,
-                ctx.from.username,
-                ctx.chat.id,
-                ctx.message.message_id,
-            );
+            const notificationsResult = await dispatchRejectionNotifications({
+                channelId: channelConfig.channelId,
+                channelTitle: channelConfig.channelTitle,
+                rejectedMessageChatId: ctx.chat.id,
+                rejectedMessageId: ctx.message.message_id,
+                actor: {
+                    id: userId,
+                    displayName: ctx.from.first_name,
+                    username: ctx.from.username,
+                },
+                excludeUserIds: [userId],
+            });
+
+            if (notificationsResult.failedTargets > 0) {
+                console.warn(
+                    `Failed to notify ${notificationsResult.failedTargets} recipients about rejection in channel ${channelConfig.channelId}.`,
+                );
+            }
 
             let errorMessage = `❌ Невозможно опубликовать сообщение: Ваше сообщение должно содержать текст иностранного агента.\n\n`;
             errorMessage += `🌍 <b>Необходимый текст:</b>\n` + `${escapeHtml(foreignAgentBlurb)}\n\n`;
@@ -190,6 +142,73 @@ export function registerMessageHandler(): void {
             errorMessage += `\n\nИли используйте ${escapeHtml("/setchannel")} для настройки другого канала`;
 
             return ctx.reply(errorMessage, { parse_mode: "HTML" });
+        }
+    });
+
+    bot.chatType("channel").on("channel_post", async (ctx) => {
+        const message = ctx.channelPost ?? ctx.msg;
+
+        if (!message) {
+            return;
+        }
+
+        const channelId = message.chat.id.toString();
+        const channelTitle = message.chat.title;
+
+        if (message.from && message.from.id === ctx.me.id) {
+            return;
+        }
+
+        const channelSettings = getChannelSettings(channelId);
+        const foreignAgentBlurb = channelSettings?.foreignAgentBlurb;
+
+        if (!foreignAgentBlurb) {
+            return;
+        }
+
+        const messageText = message.text ?? message.caption ?? "";
+
+        if (messageText.includes(foreignAgentBlurb)) {
+            return;
+        }
+
+        const actor =
+            message.from ?
+                {
+                    id: message.from.id,
+                    displayName: message.from.first_name,
+                    username: message.from.username,
+                }
+            : message.author_signature ?
+                { displayName: message.author_signature }
+            : undefined;
+
+        const notificationsResult = await dispatchRejectionNotifications({
+            channelId,
+            channelTitle,
+            rejectedMessageChatId: message.chat.id,
+            rejectedMessageId: message.message_id,
+            actor,
+            includeAuthor: true,
+        });
+
+        try {
+            await ctx.api.deleteMessage(message.chat.id, message.message_id);
+        } catch (error) {
+            console.error("Failed to delete non-compliant channel message:", error);
+
+            Sentry.withScope((scope) => {
+                scope.setContext("channel_moderation", {
+                    channel_id: channelId,
+                    message_id: message.message_id,
+                    notification_targets: notificationsResult.totalTargets,
+                    notification_failures: notificationsResult.failedTargets,
+                });
+                scope.setTag("error_type", "channel_message_delete_failed");
+                Sentry.captureException(error);
+            });
+
+            return;
         }
     });
 }
