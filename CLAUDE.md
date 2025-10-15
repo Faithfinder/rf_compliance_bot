@@ -51,7 +51,11 @@ The bot uses a modular architecture with separate concerns:
   - `channel.ts` - Channel management (`/setchannel`, `/channelstatus`, `/removechannel`)
   - `settings.ts` - Channel settings management (`/set_fa_blurb`)
   - `notifications.ts` - Notification management (`/notify_add`, `/notify_remove`, `/notify_list`)
-- **Handlers**: [src/handlers/](src/handlers/) - generic message handling, error handling, and rejection notifications
+- **Handlers**: [src/handlers/](src/handlers/) - message handlers and error handling
+  - `message.ts` - Two message handlers: private chat messages (user posts to channel) and channel posts (moderation)
+  - `error.ts` - Global error handler with Sentry integration
+- **Notifications**: [src/notifications/](src/notifications/) - notification dispatching logic
+  - `rejection.ts` - Builds and dispatches rejection notifications to administrators
 - **Utilities**: [src/utils.ts](src/utils.ts) - channel resolution and formatting utilities
 
 ### Key Patterns

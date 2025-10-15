@@ -1,6 +1,6 @@
-import * as Sentry from "@sentry/bun";
 import { b, fmt } from "@grammyjs/parse-mode";
 import { Keyboard } from "grammy";
+import type { Message } from "grammy/types";
 import { bot } from "../config/bot";
 import {
     formatChannelInfo,
@@ -9,7 +9,15 @@ import {
     checkUserChannelPermissions,
 } from "../utils";
 import { getChannelSettings } from "../db/database";
-import { dispatchRejectionNotifications } from "../notifications/rejection";
+import { addMessageToGroup, isMediaGroupValidated } from "../utils/media-groups";
+import {
+    extractMessageActor,
+    validateMessageCompliance,
+    createMediaGroupValidator,
+    handleRejectionWithNotifications,
+    reportChannelPostError,
+    reportModerationError,
+} from "./message-helpers";
 
 export function registerMessageHandler(): void {
     bot.chatType("private").on("message", async (ctx) => {
@@ -52,10 +60,100 @@ export function registerMessageHandler(): void {
             return ctx.reply(errorMessage.text, entities.length ? { entities } : undefined);
         }
 
-        const messageText = ctx.message.text || ctx.message.caption;
+        const mediaGroupId = ctx.message.media_group_id;
 
-        if (!messageText || !messageText.includes(foreignAgentBlurb)) {
-            const notificationsResult = await dispatchRejectionNotifications({
+        if (mediaGroupId) {
+            if (isMediaGroupValidated(mediaGroupId)) {
+                return;
+            }
+
+            addMessageToGroup(
+                mediaGroupId,
+                ctx.message,
+                async (messages: Message[], approved: boolean) => {
+                    if (approved) {
+                        try {
+                            const messageIds = messages.map((m) => m.message_id).sort((a, b) => a - b);
+                            await ctx.api.copyMessages(channelConfig.channelId, ctx.chat.id, messageIds);
+
+                            const successMessage = fmt`✅ Альбом опубликован в ${formatChannelInfo(
+                                channelConfig.channelId,
+                                channelConfig.channelTitle,
+                            )}`;
+                            const entities = successMessage.entities;
+                            await ctx.api.sendMessage(
+                                ctx.chat.id,
+                                successMessage.text,
+                                entities.length ? { entities } : undefined,
+                            );
+                        } catch (error) {
+                            reportChannelPostError(error, {
+                                userId,
+                                channelId: channelConfig.channelId,
+                                channelTitle: channelConfig.channelTitle,
+                                mediaGroupId,
+                            });
+
+                            const requirements = await checkChannelRequirements(channelConfig.channelId);
+                            let errorMessage = fmt`❌ Не удалось опубликовать альбом в ${formatChannelInfo(channelConfig.channelId, channelConfig.channelTitle)}\n\n📋 Требования:\n${formatChannelRequirements(requirements)}\n\n`;
+
+                            if (!requirements.channelExists) {
+                                errorMessage = fmt`${errorMessage}${fmt`${b}Следующий шаг:${b}`} Канал больше не существует или бот не может получить к нему доступ. Пожалуйста, выберите другой канал.`;
+                            } else if (!requirements.botIsAdded) {
+                                errorMessage = fmt`${errorMessage}${fmt`${b}Следующий шаг:${b}`} Попросите администратора канала добавить этого бота в качестве администратора в канал.`;
+                            } else if (!requirements.botCanPost) {
+                                errorMessage = fmt`${errorMessage}${fmt`${b}Следующий шаг:${b}`} Попросите администратора канала предоставить боту разрешение "Публиковать сообщения".`;
+                            }
+
+                            errorMessage = fmt`${errorMessage}\n\nИли используйте /setchannel для настройки другого канала`;
+
+                            const entities = errorMessage.entities;
+                            await ctx.api.sendMessage(
+                                ctx.chat.id,
+                                errorMessage.text,
+                                entities.length ? { entities } : undefined,
+                            );
+                        }
+                    } else {
+                        const firstMessage = messages[0];
+                        if (!firstMessage) {
+                            return;
+                        }
+
+                        await handleRejectionWithNotifications({
+                            channelId: channelConfig.channelId,
+                            channelTitle: channelConfig.channelTitle,
+                            rejectedMessageChatId: ctx.chat.id,
+                            rejectedMessageId: firstMessage.message_id,
+                            actor: {
+                                id: userId,
+                                displayName: ctx.from.first_name,
+                                username: ctx.from.username,
+                            },
+                            excludeUserIds: [userId],
+                        });
+
+                        let errorMessage = fmt`❌ Невозможно опубликовать альбом: Ваше сообщение должно содержать текст иностранного агента.\n\n🌍 ${fmt`${b}Необходимый текст:${b}`}\n${foreignAgentBlurb}\n\nПожалуйста, добавьте этот текст к вашему сообщению и повторите попытку.\nОригинальное сообщение:`;
+
+                        const messageIds = messages.map((m) => m.message_id).sort((a, b) => a - b);
+                        await ctx.api.copyMessages(ctx.chat.id, ctx.chat.id, messageIds);
+
+                        const entities = errorMessage.entities;
+                        await ctx.api.sendMessage(
+                            ctx.chat.id,
+                            errorMessage.text,
+                            entities.length ? { entities } : undefined,
+                        );
+                    }
+                },
+                createMediaGroupValidator(foreignAgentBlurb),
+            );
+
+            return;
+        }
+
+        if (!validateMessageCompliance(ctx.message, foreignAgentBlurb)) {
+            await handleRejectionWithNotifications({
                 channelId: channelConfig.channelId,
                 channelTitle: channelConfig.channelTitle,
                 rejectedMessageChatId: ctx.chat.id,
@@ -67,12 +165,6 @@ export function registerMessageHandler(): void {
                 },
                 excludeUserIds: [userId],
             });
-
-            if (notificationsResult.failedTargets > 0) {
-                console.warn(
-                    `Failed to notify ${notificationsResult.failedTargets} recipients about rejection in channel ${channelConfig.channelId}.`,
-                );
-            }
 
             let errorMessage = fmt`❌ Невозможно опубликовать сообщение: Ваше сообщение должно содержать текст иностранного агента.\n\n🌍 ${fmt`${b}Необходимый текст:${b}`}\n${foreignAgentBlurb}\n\nПожалуйста, добавьте этот текст к вашему сообщению и повторите попытку.\nОригинальное сообщение:`;
 
@@ -92,16 +184,10 @@ export function registerMessageHandler(): void {
             const entities = successMessage.entities;
             return ctx.reply(successMessage.text, entities.length ? { entities } : undefined);
         } catch (error) {
-            console.error("Error posting to channel:", error);
-
-            Sentry.withScope((scope) => {
-                scope.setContext("channel_post", {
-                    user_id: userId,
-                    channel_id: channelConfig.channelId,
-                    channel_title: channelConfig.channelTitle,
-                });
-                scope.setTag("error_type", "channel_post_failed");
-                Sentry.captureException(error);
+            reportChannelPostError(error, {
+                userId,
+                channelId: channelConfig.channelId,
+                channelTitle: channelConfig.channelTitle,
             });
 
             const requirements = await checkChannelRequirements(channelConfig.channelId);
@@ -160,24 +246,63 @@ export function registerMessageHandler(): void {
             return;
         }
 
-        const messageText = message.text ?? message.caption ?? "";
+        const mediaGroupId = message.media_group_id;
 
-        if (messageText.includes(foreignAgentBlurb)) {
+        if (mediaGroupId) {
+            if (isMediaGroupValidated(mediaGroupId)) {
+                return;
+            }
+
+            addMessageToGroup(
+                mediaGroupId,
+                message,
+                async (messages: Message[], approved: boolean) => {
+                    if (approved) {
+                        return;
+                    }
+
+                    const firstMessage = messages[0];
+                    if (!firstMessage) {
+                        return;
+                    }
+
+                    const actor = extractMessageActor(firstMessage);
+
+                    await handleRejectionWithNotifications({
+                        channelId,
+                        channelTitle,
+                        rejectedMessageChatId: firstMessage.chat.id,
+                        rejectedMessageId: firstMessage.message_id,
+                        actor,
+                        includeAuthor: true,
+                    });
+
+                    try {
+                        const messageIds = messages.map((m) => m.message_id).sort((a, b) => a - b);
+                        await ctx.api.deleteMessages(message.chat.id, messageIds);
+                    } catch (error) {
+                        reportModerationError(error, {
+                            channelId,
+                            mediaGroupId,
+                            messageCount: messages.length,
+                            notificationTargets: 0,
+                            notificationFailures: 0,
+                        });
+                    }
+                },
+                createMediaGroupValidator(foreignAgentBlurb),
+            );
+
             return;
         }
 
-        const actor =
-            message.from ?
-                {
-                    id: message.from.id,
-                    displayName: message.from.first_name,
-                    username: message.from.username,
-                }
-            : message.author_signature ?
-                { displayName: message.author_signature }
-            : undefined;
+        if (validateMessageCompliance(message, foreignAgentBlurb)) {
+            return;
+        }
 
-        const notificationsResult = await dispatchRejectionNotifications({
+        const actor = extractMessageActor(message);
+
+        await handleRejectionWithNotifications({
             channelId,
             channelTitle,
             rejectedMessageChatId: message.chat.id,
@@ -189,17 +314,11 @@ export function registerMessageHandler(): void {
         try {
             await ctx.api.deleteMessage(message.chat.id, message.message_id);
         } catch (error) {
-            console.error("Failed to delete non-compliant channel message:", error);
-
-            Sentry.withScope((scope) => {
-                scope.setContext("channel_moderation", {
-                    channel_id: channelId,
-                    message_id: message.message_id,
-                    notification_targets: notificationsResult.totalTargets,
-                    notification_failures: notificationsResult.failedTargets,
-                });
-                scope.setTag("error_type", "channel_message_delete_failed");
-                Sentry.captureException(error);
+            reportModerationError(error, {
+                channelId,
+                messageId: message.message_id,
+                notificationTargets: 0,
+                notificationFailures: 0,
             });
 
             return;
