@@ -133,10 +133,6 @@ export function registerChannelCommands(): void {
             return ctx.reply("Не удается идентифицировать пользователя.");
         }
 
-        trackEvent(userId, "command_executed", {
-            command: "setchannel",
-        });
-
         const args = ctx.match;
         if (!args || typeof args !== "string" || args.trim() === "") {
             const { text, keyboard } = showChannelSelectionUI();
@@ -154,10 +150,6 @@ export function registerChannelCommands(): void {
         if (!userId) {
             return ctx.reply("Не удается идентифицировать пользователя.");
         }
-
-        trackEvent(userId, "command_executed", {
-            command: "removechannel",
-        });
 
         if (!ctx.session.channelConfig) {
             return ctx.reply("У вас не настроен канал.");

@@ -12,10 +12,6 @@ export function registerSettingsCommand(): void {
             return ctx.reply("Не удается идентифицировать пользователя.");
         }
 
-        trackEvent(userId, "command_executed", {
-            command: "set_fa_blurb",
-        });
-
         const channelConfig = ctx.session.channelConfig;
 
         if (!channelConfig) {

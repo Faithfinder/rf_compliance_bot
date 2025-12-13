@@ -8,11 +8,13 @@ import { registerNotificationUserSelectionHandler } from "./commands/notificatio
 import { registerDumpDbCommand } from "./commands/dump_db";
 import { registerMessageHandler } from "./handlers/message";
 import { registerErrorHandler } from "./handlers/error";
+import { commandTelemetryMiddleware } from "./middleware/telemetry";
 
 initializeSentry();
 initializePostHog();
 initializeDatabase();
 bot.use(createSessionMiddleware());
+bot.use(commandTelemetryMiddleware);
 await setBotCommands();
 
 const registeredFunctions = new Set<() => void>();

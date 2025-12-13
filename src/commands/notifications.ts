@@ -157,13 +157,6 @@ async function handleUserSelection(
 
 export function registerNotificationCommands(): void {
     bot.command("notify_add", async (ctx) => {
-        const userId = ctx.from?.id;
-        if (userId) {
-            trackEvent(userId, "command_executed", {
-                command: "notify_add",
-            });
-        }
-
         const validation = await validateNotificationAccess(ctx);
         if (!validation.success || !validation.channelId) return;
 
@@ -171,13 +164,6 @@ export function registerNotificationCommands(): void {
     });
 
     bot.command("notify_remove", async (ctx) => {
-        const userId = ctx.from?.id;
-        if (userId) {
-            trackEvent(userId, "command_executed", {
-                command: "notify_remove",
-            });
-        }
-
         const validation = await validateNotificationAccess(ctx);
         if (!validation.success || !validation.channelId) return;
 
@@ -185,13 +171,6 @@ export function registerNotificationCommands(): void {
     });
 
     bot.command("notify_list", async (ctx) => {
-        const userId = ctx.from?.id;
-        if (userId) {
-            trackEvent(userId, "command_executed", {
-                command: "notify_list",
-            });
-        }
-
         const validation = await validateNotificationAccess(ctx, "isAdmin");
         if (!validation.success || !validation.channelId) return;
 

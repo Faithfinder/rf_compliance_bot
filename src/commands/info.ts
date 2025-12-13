@@ -1,6 +1,5 @@
 import { FormattedString, b, code, fmt } from "@grammyjs/parse-mode";
 import { bot } from "../config/bot";
-import { trackEvent } from "../config/posthog";
 import {
     checkChannelRequirements,
     formatChannelRequirements,
@@ -17,11 +16,6 @@ export function registerInfoCommand(): void {
         if (!userId || !ctx.from) {
             return ctx.reply("Не удается идентифицировать пользователя.");
         }
-
-        trackEvent(userId, "command_executed", {
-            command: "info",
-            has_channel_config: !!ctx.session.channelConfig,
-        });
 
         const channelConfig = ctx.session.channelConfig;
 
