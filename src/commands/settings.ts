@@ -1,5 +1,6 @@
 import { b, fmt, i } from "@grammyjs/parse-mode";
 import { bot } from "../config/bot";
+import { trackEvent } from "../config/posthog";
 import { getChannelSettings, updateChannelSettings } from "../db/database";
 import { checkUserChannelPermissions, formatChannelInfo } from "../utils";
 
@@ -10,6 +11,10 @@ export function registerSettingsCommand(): void {
         if (!userId) {
             return ctx.reply("Не удается идентифицировать пользователя.");
         }
+
+        trackEvent(userId, "command_executed", {
+            command: "set_fa_blurb",
+        });
 
         const channelConfig = ctx.session.channelConfig;
 
@@ -57,6 +62,11 @@ export function registerSettingsCommand(): void {
         }
 
         updateChannelSettings(channelConfig.channelId, { foreignAgentBlurb: newBlurb });
+
+        trackEvent(userId, "foreign_agent_blurb_updated", {
+            channel_id: channelConfig.channelId,
+            blurb_length: newBlurb.length,
+        });
 
         let confirmMessage = fmt`✅ Текст иностранного агента успешно обновлен!\n\n📢 ${fmt`${b}Канал:${b}`} ${formatChannelInfo(channelConfig.channelId, channelConfig.channelTitle)}\n\n🌍 ${fmt`${b}Новый текст иностранного агента:${b}`}\n`;
         confirmMessage = fmt`${confirmMessage}${newBlurb}`;

@@ -2,6 +2,7 @@ import { b, fmt } from "@grammyjs/parse-mode";
 import { Keyboard } from "grammy";
 import type { Message } from "grammy/types";
 import { bot } from "../config/bot";
+import { trackEvent } from "../config/posthog";
 import {
     formatChannelInfo,
     checkChannelRequirements,
@@ -76,6 +77,12 @@ export function registerMessageHandler(): void {
                             const messageIds = messages.map((m) => m.message_id).sort((a, b) => a - b);
                             await ctx.api.copyMessages(channelConfig.channelId, ctx.chat.id, messageIds);
 
+                            trackEvent(userId, "message_posted", {
+                                channel_id: channelConfig.channelId,
+                                message_type: "media_group",
+                                media_count: messages.length,
+                            });
+
                             const successMessage = fmt`✅ Альбом опубликован в ${formatChannelInfo(
                                 channelConfig.channelId,
                                 channelConfig.channelTitle,
@@ -120,6 +127,13 @@ export function registerMessageHandler(): void {
                             return;
                         }
 
+                        trackEvent(userId, "message_rejected", {
+                            channel_id: channelConfig.channelId,
+                            message_type: "media_group",
+                            media_count: messages.length,
+                            reason: "missing_foreign_agent_text",
+                        });
+
                         await handleRejectionWithNotifications({
                             channelId: channelConfig.channelId,
                             channelTitle: channelConfig.channelTitle,
@@ -153,6 +167,12 @@ export function registerMessageHandler(): void {
         }
 
         if (!validateMessageCompliance(ctx.message, foreignAgentBlurb)) {
+            trackEvent(userId, "message_rejected", {
+                channel_id: channelConfig.channelId,
+                message_type: "single",
+                reason: "missing_foreign_agent_text",
+            });
+
             await handleRejectionWithNotifications({
                 channelId: channelConfig.channelId,
                 channelTitle: channelConfig.channelTitle,
@@ -176,6 +196,11 @@ export function registerMessageHandler(): void {
 
         try {
             await ctx.api.copyMessage(channelConfig.channelId, ctx.chat.id, ctx.message.message_id);
+
+            trackEvent(userId, "message_posted", {
+                channel_id: channelConfig.channelId,
+                message_type: "single",
+            });
 
             const successMessage = fmt`✅ Сообщение опубликовано в ${formatChannelInfo(
                 channelConfig.channelId,
@@ -268,6 +293,15 @@ export function registerMessageHandler(): void {
 
                     const actor = extractMessageActor(firstMessage);
 
+                    if (actor?.id) {
+                        trackEvent(actor.id, "channel_post_moderated", {
+                            channel_id: channelId,
+                            message_type: "media_group",
+                            media_count: messages.length,
+                            reason: "missing_foreign_agent_text",
+                        });
+                    }
+
                     await handleRejectionWithNotifications({
                         channelId,
                         channelTitle,
@@ -301,6 +335,14 @@ export function registerMessageHandler(): void {
         }
 
         const actor = extractMessageActor(message);
+
+        if (actor?.id) {
+            trackEvent(actor.id, "channel_post_moderated", {
+                channel_id: channelId,
+                message_type: "single",
+                reason: "missing_foreign_agent_text",
+            });
+        }
 
         await handleRejectionWithNotifications({
             channelId,
