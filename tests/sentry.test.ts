@@ -2,7 +2,7 @@ import { describe, test, expect, spyOn } from "bun:test";
 import * as Sentry from "@sentry/bun";
 
 describe("Sentry Configuration", () => {
-    test("should initialize Sentry with normalizeDepth set to 5", () => {
+    test("should initialize Sentry with normalizeDepth set to 5", async () => {
         const originalDSN = process.env.SENTRY_DSN;
         const originalEnv = process.env.NODE_ENV;
 
@@ -12,9 +12,7 @@ describe("Sentry Configuration", () => {
             process.env.SENTRY_DSN = "https://test@sentry.io/12345";
             process.env.NODE_ENV = "test";
 
-            // Re-import to get fresh module
-            delete require.cache[require.resolve("../src/config/sentry")];
-            const { initializeSentry } = require("../src/config/sentry");
+            const { initializeSentry } = await import("../src/config/sentry");
             const result = initializeSentry();
 
             expect(result).toBe(true);
@@ -38,15 +36,13 @@ describe("Sentry Configuration", () => {
         }
     });
 
-    test("should not initialize Sentry when SENTRY_DSN is not provided", () => {
+    test("should not initialize Sentry when SENTRY_DSN is not provided", async () => {
         const originalDSN = process.env.SENTRY_DSN;
 
         try {
             delete process.env.SENTRY_DSN;
 
-            // Re-import to get fresh module
-            delete require.cache[require.resolve("../src/config/sentry")];
-            const { initializeSentry } = require("../src/config/sentry");
+            const { initializeSentry } = await import("../src/config/sentry");
             const result = initializeSentry();
 
             expect(result).toBe(false);
