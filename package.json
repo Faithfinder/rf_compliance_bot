@@ -27,6 +27,7 @@
   "dependencies": {
     "@grammyjs/parse-mode": "^2.2.0",
     "@sentry/bun": "^10.17.0",
-    "grammy": "^1.38.2"
+    "grammy": "^1.38.2",
+    "posthog-node": "^5.17.2"
   }
 }

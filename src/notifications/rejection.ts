@@ -1,6 +1,7 @@
 import * as Sentry from "@sentry/bun";
 import { FormattedString, b, code, fmt } from "@grammyjs/parse-mode";
 import { bot } from "../config/bot";
+import { trackEvent } from "../config/posthog";
 import { getNotificationUsers } from "../db/database";
 import { formatChannelInfo } from "../utils";
 
@@ -116,6 +117,12 @@ export async function dispatchRejectionNotifications(
             );
             await bot.api.copyMessage(target.userId, params.rejectedMessageChatId, params.rejectedMessageId);
             successfulTargets += 1;
+
+            trackEvent(target.userId, "rejection_notification_received", {
+                channel_id: params.channelId,
+                scope: target.scope,
+                actor_id: params.actor?.id,
+            });
         } catch (error) {
             console.error(`Failed to send rejection notification to ${target.scope} ${target.userId}:`, error);
 

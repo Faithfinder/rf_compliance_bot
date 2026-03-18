@@ -2,6 +2,7 @@ import { Keyboard } from "grammy";
 import { FormattedString, b, fmt } from "@grammyjs/parse-mode";
 import { bot } from "../config/bot";
 import type { SessionContext } from "../config/session";
+import { trackEvent } from "../config/posthog";
 import {
     resolveChannel,
     formatChannelInfo,
@@ -37,11 +38,18 @@ export function showChannelSelectionUI(errorMessage?: string): { text: string; k
 
 async function processChannelSelection(ctx: SessionContext, channelIdentifier: string): Promise<void> {
     const chatId = ctx.chat!.id;
+    const userId = ctx.from?.id;
 
     const workingMsg = await ctx.reply("Поиск канала...");
     const channelInfo = await resolveChannel(channelIdentifier);
 
     if (!channelInfo) {
+        if (userId) {
+            trackEvent(userId, "channel_selection_failed", {
+                channel_identifier: channelIdentifier,
+                reason: "channel_not_found",
+            });
+        }
         await bot.api.deleteMessage(chatId, workingMsg.message_id).catch(() => {});
         const errorMessage =
             "Не удается найти или получить доступ к этому каналу. Убедитесь, что бот был добавлен в канал в качестве администратора.";
@@ -55,6 +63,13 @@ async function processChannelSelection(ctx: SessionContext, channelIdentifier: s
         channelId: channelInfo.id,
         channelTitle: channelInfo.title,
     };
+
+    if (userId) {
+        trackEvent(userId, "channel_configured", {
+            channel_id: channelInfo.id,
+            channel_title: channelInfo.title,
+        });
+    }
 
     await bot.api.editMessageText(chatId, workingMsg.message_id, "Проверка разрешений бота...");
 
@@ -140,7 +155,12 @@ export function registerChannelCommands(): void {
             return ctx.reply("У вас не настроен канал.");
         }
 
+        const channelId = ctx.session.channelConfig.channelId;
         delete ctx.session.channelConfig;
+
+        trackEvent(userId, "channel_removed", {
+            channel_id: channelId,
+        });
 
         return ctx.reply(
             "✅ Конфигурация канала успешно удалена.\n\nВаши сообщения больше не будут публиковаться ни в какой канал.",

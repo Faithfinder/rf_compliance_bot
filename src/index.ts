@@ -1,5 +1,6 @@
 import { bot, setBotCommands } from "./config/bot";
 import { initializeSentry, closeSentry } from "./config/sentry";
+import { initializePostHog, closePostHog } from "./config/posthog";
 import { createSessionMiddleware } from "./config/session";
 import { initializeDatabase, closeDatabase } from "./db/database";
 import { commandDefinitions } from "./commands/definitions";
@@ -7,10 +8,13 @@ import { registerNotificationUserSelectionHandler } from "./commands/notificatio
 import { registerDumpDbCommand } from "./commands/dump_db";
 import { registerMessageHandler } from "./handlers/message";
 import { registerErrorHandler } from "./handlers/error";
+import { commandTelemetryMiddleware } from "./middleware/telemetry";
 
 initializeSentry();
+initializePostHog();
 initializeDatabase();
 bot.use(createSessionMiddleware());
+bot.use(commandTelemetryMiddleware);
 await setBotCommands();
 
 const registeredFunctions = new Set<() => void>();
@@ -33,6 +37,7 @@ const gracefulShutdown = async (signal: string) => {
     await bot.stop();
     console.warn("Bot stopped.");
     closeDatabase();
+    await closePostHog();
     await closeSentry();
 
     process.exit(0);

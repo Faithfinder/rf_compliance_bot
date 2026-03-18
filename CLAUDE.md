@@ -39,8 +39,8 @@ bun run format:check         # Check formatting without modifying
 
 The bot uses a modular architecture with separate concerns:
 
-- **Entry point**: [src/index.ts](src/index.ts) - initializes Sentry and database, installs session middleware, registers all commands/handlers, and starts the bot with graceful shutdown handling
-- **Configuration**: [src/config/](src/config/) - bot instance (`bot.ts`), session configuration (`session.ts`), and Sentry initialization (`sentry.ts`)
+- **Entry point**: [src/index.ts](src/index.ts) - initializes Sentry, PostHog, and database, installs session middleware, registers all commands/handlers, and starts the bot with graceful shutdown handling
+- **Configuration**: [src/config/](src/config/) - bot instance (`bot.ts`), session configuration (`session.ts`), Sentry initialization (`sentry.ts`), and PostHog telemetry (`posthog.ts`)
 - **Database**: [src/db/](src/db/) - SQLite database for shared channel settings
   - `database.ts` - Database initialization and CRUD operations
 - **Commands**: [src/commands/](src/commands/) - command handlers registered via functions
@@ -71,14 +71,42 @@ The bot uses a modular architecture with separate concerns:
   - Commands are registered in [src/index.ts](src/index.ts) by iterating through definitions (with deduplication for shared registration functions)
 - **Registration functions**: All commands and handlers are registered via `register*()` functions
 - **Error handling**: Global error handler in [src/handlers/error.ts](src/handlers/error.ts) captures all bot errors and reports to Sentry with context
-- **Graceful shutdown**: SIGINT/SIGTERM handlers ensure the bot stops cleanly, closes database connection, and flushes Sentry events
+- **Telemetry**: PostHog tracks user interactions, command executions, message posting, and rejections for analytics
+- **Graceful shutdown**: SIGINT/SIGTERM handlers ensure the bot stops cleanly, closes database connection, and flushes Sentry and PostHog events
 
 ### Environment Configuration
 
 - `TELEGRAM_BOT_TOKEN` (required) - Bot token from @BotFather
 - `SENTRY_DSN` (optional) - Sentry DSN for error tracking
+- `POSTHOG_API_KEY` (optional) - PostHog API key for telemetry
+- `POSTHOG_HOST` (optional) - PostHog instance URL (defaults to https://app.posthog.com)
 - `NODE_ENV` (optional) - Environment name (development/production)
 - Use `.env` file for local development (copy from `.env.example`)
+
+### Telemetry
+
+The bot uses PostHog for product analytics and telemetry tracking. Telemetry is optional and only enabled when `POSTHOG_API_KEY` is configured.
+
+**Tracked Events:**
+
+- **Command executions**: All user commands (e.g., `/start`, `/help`, `/setchannel`, etc.)
+- **Channel operations**: Channel configuration, removal, and settings updates
+- **Message operations**: Message posting (approved) and rejections (missing compliance text)
+- **Moderation**: Channel post moderation events
+- **Notifications**: Rejection notification dispatches
+
+**Privacy Considerations:**
+
+- User IDs are used as distinct identifiers for tracking user journeys
+- Message content is never tracked, only metadata (e.g., message type, channel ID)
+- Telemetry can be completely disabled by not setting `POSTHOG_API_KEY`
+
+**Implementation:**
+
+- Telemetry module: [src/config/posthog.ts](src/config/posthog.ts)
+- Track events using `trackEvent(userId, eventName, properties)`
+- All events automatically include environment context
+- Events are buffered and flushed during graceful shutdown
 
 ### Docker Deployment
 
