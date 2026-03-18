@@ -27,7 +27,7 @@ export function extractMessageActor(message: Message): MessageActor | undefined 
 }
 
 function extractMessageText(message: Message): string {
-    return message.text ?? message.caption ?? "";
+    return message.text ?? message.caption ?? message.poll?.question ?? "";
 }
 
 export function validateMessageCompliance(message: Message, requiredBlurb: string): boolean {
