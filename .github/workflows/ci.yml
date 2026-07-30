@@ -2,8 +2,9 @@ name: CI
 
 on:
     push:
-        branches: [main]
+        branches: [main, claude/russian-docs-improvements-5iwtvl]
     pull_request:
+    workflow_dispatch:
 
 jobs:
     check:
