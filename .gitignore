@@ -33,8 +33,9 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 # Finder (MacOS) folder config
 .DS_Store
 
-# Claude Code IDE
-.claude
+# Claude Code IDE (local settings ignored, shared skills tracked)
+.claude/*
+!.claude/skills/
 
 # User data (channel configurations)
 data/
