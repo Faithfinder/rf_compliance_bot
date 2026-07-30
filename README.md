@@ -1,125 +1,219 @@
-# RF Compliance Bot
+# RF Compliance Bot — маркировка материалов иноагента
 
-A Telegram bot built with TypeScript and Bun for RF compliance information and regulations.
+[![CI](https://github.com/Faithfinder/rf_compliance_bot/actions/workflows/ci.yml/badge.svg)](https://github.com/Faithfinder/rf_compliance_bot/actions/workflows/ci.yml)
 
-## Prerequisites
+Telegram-бот, который не даёт опубликовать в канале материал без обязательной маркировки иностранного агента. Он проверяет каждое сообщение до публикации, а посты, попавшие в канал в обход бота, удаляет и сообщает о них администраторам.
 
-- [Bun](https://bun.sh) v1.3.14 or higher
-- A Telegram Bot Token (obtain from [@BotFather](https://t.me/botfather))
+## Зачем это нужно
 
-## Setup
+**Обязанность.** Материалы, произведённые или распространённые иностранным агентом, должны сопровождаться указанием на этот статус — [255-ФЗ «О контроле за деятельностью лиц, находящихся под иностранным влиянием»](https://www.consultant.ru/document/cons_doc_LAW_421788/). Форма указания и правила его размещения установлены [постановлением Правительства РФ от 22.11.2022 № 2108](https://www.consultant.ru/document/cons_doc_LAW_432014/) (действует с 01.12.2022). Типовая формулировка:
 
-1. **Clone the repository** (if applicable)
+```
+НАСТОЯЩИЙ МАТЕРИАЛ (ИНФОРМАЦИЯ) ПРОИЗВЕДЕН, РАСПРОСТРАНЕН И (ИЛИ) НАПРАВЛЕН
+ИНОСТРАННЫМ АГЕНТОМ «ИМЯ АГЕНТА» ЛИБО КАСАЕТСЯ ДЕЯТЕЛЬНОСТИ ИНОСТРАННОГО
+АГЕНТА «ИМЯ АГЕНТА». 18+
+```
 
-2. **Install dependencies:**
-   ```bash
-   bun install
+**Первый пропуск — административная ответственность.** [Статья 19.34 КоАП](https://www.consultant.ru/document/cons_doc_LAW_34661/1216f68ce6aaa76e9eddfeef6e07f3a5b8785f2a/), распространение материалов без указания на статус иноагента: граждане — 30–50 тыс. ₽, должностные лица — 100–300 тыс. ₽, юридические лица — 300–500 тыс. ₽.
+
+**Второй — уголовная, и порог недавно снизили.** [Статья 330.1 УК](https://www.consultant.ru/document/cons_doc_LAW_10699/eced99f183c1f9087f9b4f9e512295fbc846762e/): штраф до 300 тыс. ₽ либо в размере дохода за период до двух лет, обязательные работы до 480 часов, исправительные или принудительные работы до двух лет, **либо лишение свободы на срок до двух лет**. Раньше для возбуждения дела требовались два административных наказания в течение года; [Федеральный закон от 15.10.2025 № 378-ФЗ](https://www.garant.ru/news/1895790/), вступивший в силу 26.10.2025, оставил **одно** — наказания по любой из частей 2–9 статьи 19.34 КоАП достаточно, чтобы следующее такое же нарушение квалифицировалось уже по Уголовному кодексу.
+
+Отсюда и смысл бота: один забытый пост — это не «штраф и забыли», а первая ступень, после которой второй такой же пост становится уголовным делом. Полагаться на внимательность в такой ситуации не стоит, поэтому проверка вынесена в бота и выполняется до публикации.
+
+> ⚠️ **Бот — техническое средство контроля, а не юридическая консультация.** Формулировку маркировки, её применимость к вашему случаю и порядок размещения согласуйте с юристом. Законодательство об иноагентах меняется часто (последнее ужесточение — октябрь 2025), поэтому приведённые здесь нормы и суммы проверяйте на актуальность.
+
+Учтите также, что бот сверяет **только наличие заданной строки в тексте**. Требования постановления № 2108 к оформлению — размер шрифта вдвое больше основного текста, контрастный цвет, размещение в начале материала — он не проверяет и проверить не может.
+
+## Как это работает
+
+Есть два независимых потока.
+
+```mermaid
+flowchart TD
+    A[Автор пишет боту в личные сообщения] --> B{Есть маркировка?}
+    B -- да --> C[Бот копирует сообщение в канал]
+    B -- нет --> D[Отказ + копия исходного сообщения автору<br/>+ уведомление администраторам]
+
+    E[Кто-то публикует пост<br/>напрямую в канале] --> F{Есть маркировка?}
+    F -- да --> G[Пост остаётся]
+    F -- нет --> H[Уведомление администраторам с копией поста<br/>затем пост удаляется]
+```
+
+**1. Публикация через бота.** Автор отправляет сообщение боту в личные сообщения. Если маркировка на месте, бот копирует сообщение в канал (`copyMessage`, форматирование сохраняется) и отвечает подтверждением. Если нет — публикация не происходит, а бот присылает обратно копию исходного сообщения, чтобы его можно было поправить и отправить снова.
+
+**2. Модерация прямых постов.** Если пост появился в канале в обход бота, бот проверяет его так же. Немаркированный пост он сначала пересылает подписанным администраторам, а затем удаляет из канала.
+
+> 💡 Второй поток — страховка, а не основной режим работы. Чтобы им не пользовались как лазейкой, у администраторов-людей стоит **снять право «Публиковать сообщения»**: тогда единственный путь в канал будет через бота. Команда `/info` сама подсказывает это, если видит у вас такое право.
+
+## Быстрый старт
+
+1. Получите токен бота у [@BotFather](https://t.me/botfather).
+2. **Добавьте бота в канал администратором** с правами **«Публиковать сообщения»** и **«Удалять сообщения»**. Сделайте это до шага 4: кнопка выбора канала показывает только те каналы, где бот уже состоит.
+3. Запустите бота — см. [Установка и запуск](#установка-и-запуск).
+4. Напишите боту `/start` в личные сообщения и выберите канал кнопкой. Либо укажите его вручную:
    ```
+   /setchannel @mychannel
+   /setchannel -1001234567890
+   ```
+5. Задайте текст маркировки:
+   ```
+   /set_fa_blurb НАСТОЯЩИЙ МАТЕРИАЛ (ИНФОРМАЦИЯ) ПРОИЗВЕДЕН, РАСПРОСТРАНЕН И (ИЛИ) НАПРАВЛЕН ИНОСТРАННЫМ АГЕНТОМ «ИМЯ АГЕНТА» ЛИБО КАСАЕТСЯ ДЕЯТЕЛЬНОСТИ ИНОСТРАННОГО АГЕНТА «ИМЯ АГЕНТА». 18+
+   ```
+   **Без этого шага бот бесполезен:** публикация через личные сообщения будет запрещена, а модерация канала — молча отключена.
+6. Проверьте `/info` — чек-лист требований должен быть полностью зелёным.
+7. Добавьте получателей уведомлений об отклонённых сообщениях: `/notify_add`.
+8. Снимите право «Публиковать сообщения» у администраторов-людей.
 
-3. **Configure environment variables:**
-   - Copy `.env.example` to `.env`:
-     ```bash
-     cp .env.example .env
-     ```
-   - Edit `.env` and add your Telegram bot token:
-     ```
-     TELEGRAM_BOT_TOKEN=your_actual_bot_token_here
-     ```
+## Команды
 
-## Development
+| Команда | Что делает | Кто может |
+| --- | --- | --- |
+| `/start` | Приветствие; если канал не настроен — сразу предлагает его выбрать | все |
+| `/help` | Список доступных команд | все |
+| `/info` | Сводка: вы, настроенный канал, чек-лист требований, текущая маркировка, ваши права в канале | все |
+| `/setchannel <@channel или ID>` | Настроить канал для публикации. Без аргументов показывает кнопку выбора | все |
+| `/removechannel` | Убрать настройку канала | все |
+| `/set_fa_blurb [текст]` | **Без аргументов** — показать текущую маркировку. **С аргументами** — задать новую | просмотр — все; изменение — администратор канала с правом управления чатом |
+| `/notify_add [user_id]` | Добавить получателя уведомлений. Без аргументов открывает кнопку выбора пользователя | администратор канала с правом управления чатом |
+| `/notify_remove [user_id]` | Убрать получателя уведомлений | администратор канала с правом управления чатом |
+| `/notify_list` | Показать список получателей | администратор канала |
 
-### Available Commands
+Что стоит знать отдельно:
 
-- `bun run dev` - Start the bot in development mode with hot reload
-- `bun run start` - Start the bot in production mode
-- `bun run test` - Run tests
-- `bun run test:coverage` - Run tests with coverage report
-- `bun run lint` - Lint the code
-- `bun run lint:fix` - Lint and auto-fix issues
-- `bun run format` - Format code with Prettier
-- `bun run format:check` - Check code formatting
+- **`/setchannel` и `/removechannel` исчезают**, если задана переменная `FIXED_CHANNEL_ID`: в этом режиме канал один для всех и меняться не может.
+- **Настройки привязаны к каналу, а не к пользователю.** Маркировка и список уведомлений общие для всех, кто настроил у себя этот канал.
+- **`/notify_add` и `/notify_remove` принимают только числовой ID пользователя** — поиск по `@username` в Telegram Bot API недоступен. Проще пользоваться кнопкой выбора. Добавляемый пользователь должен быть администратором канала.
+- **`/dump_db`** — служебная команда, отправляющая владельцу бота весь файл базы данных. Она **не входит в меню и не показывается в `/help`**, регистрируется только при заданном `BOT_OWNER_ID` и работает только для этого пользователя в личных сообщениях.
 
-### Project Structure
+## Что считается маркированным
+
+Правила сопоставления неочевидны, поэтому стоит их знать:
+
+- Проверяется **наличие заданной строки** в тексте сообщения, либо в подписи к медиа, либо в вопросе опроса.
+- Сравнение **чувствительно к регистру и пробелам**. Маркировка должна совпадать с настроенной посимвольно.
+- **Форматирование не мешает:** если часть маркировки выделена жирным или курсивом, она всё равно найдётся.
+- **Rich-сообщения** Telegram (заголовки, списки, таблицы, цитаты, сворачиваемые блоки, формулы) не содержат обычного текстового поля, поэтому их блоки сначала разворачиваются в плоский текст. Для них сравнение дополнительно повторяется с нормализованными пробелами — структура блоков не сохраняет переносы строк из настроенной маркировки.
+- **Альбом** (несколько медиа одним сообщением) считается маркированным, если маркировка есть **хотя бы в одном** сообщении группы: подписи к одной фотографии достаточно.
+- Собственные посты бота при модерации пропускаются.
+
+## Уведомления об отклонённых сообщениях
+
+Получателям из `/notify_list` приходит карточка и следом — копия отклонённого сообщения:
+
+```
+🚫 Сообщение отклонено
+
+📢 Канал: Название канала (-1001234567890)
+👤 Пользователь: Имя (@username)
+🆔 ID: 123456789
+🕐 Время: 30.07.2026, 18:01
+
+❌ Причина: Отсутствует текст иностранного агента
+
+📝 Отклоненное сообщение:
+```
+
+Время указывается по Москве. В потоке «публикация через бота» автор из рассылки исключается — он и так получил отказ. В потоке модерации канала автор, наоборот, получает уведомление в личные сообщения.
+
+Telegram не всегда сообщает ID автора поста в канале — иногда доступна только подпись автора. В этом случае бот всё равно удаляет пост и уведомляет подписанных администраторов, просто не может написать автору лично.
+
+## Установка и запуск
+
+Требуется [Bun](https://bun.sh) версии 1.3.14 или выше. Node.js не используется.
+
+```bash
+bun install
+cp .env.example .env
+```
+
+Впишите в `.env` токен из [@BotFather](https://t.me/botfather):
+
+```
+TELEGRAM_BOT_TOKEN=ваш_токен
+```
+
+Запуск:
+
+```bash
+bun run dev     # с автоперезапуском при изменениях
+bun run start   # обычный запуск
+```
+
+Шага сборки нет — бот запускается прямо из TypeScript. Если `TELEGRAM_BOT_TOKEN` не задан, процесс падает сразу при старте.
+
+## Переменные окружения
+
+| Переменная | Назначение | Обязательна |
+| --- | --- | --- |
+| `TELEGRAM_BOT_TOKEN` | Токен бота от [@BotFather](https://t.me/botfather). Без него бот не запустится | да |
+| `NODE_ENV` | Окружение (`development` / `production`). Передаётся в Sentry как имя окружения | нет |
+| `FIXED_CHANNEL_ID` | Жёстко закрепляет один канал за всеми пользователями и убирает команды `/setchannel` и `/removechannel` | нет |
+| `BOT_OWNER_ID` | Числовой Telegram ID владельца. Включает `/dump_db`, отправляющую всю базу данных в Telegram. Не задавайте без необходимости | нет |
+| `SENTRY_DSN` | DSN для отправки ошибок в Sentry. Если пусто — трекинг ошибок отключён | нет |
+
+`FIXED_CHANNEL_ID` подставляется при создании сессии пользователя, поэтому применяется только к сессиям, созданным **после** установки переменной. Пользователи, уже работавшие с ботом, останутся на своём канале.
+
+## Docker
+
+**Каталог `/app/data` обязан быть примонтированным томом.** В нём лежит база SQLite с настройками каналов и сессиями пользователей; без тома она живёт в изменяемом слое контейнера, и каждый перезапуск молча стирает всю конфигурацию.
+
+```bash
+docker build -t rf-compliance-bot .
+docker run -v ./data:/app/data -e TELEGRAM_BOT_TOKEN=ваш_токен rf-compliance-bot
+```
+
+```yaml
+services:
+    bot:
+        image: rf-compliance-bot
+        volumes:
+            - ./data:/app/data
+        environment:
+            - TELEGRAM_BOT_TOKEN=ваш_токен
+```
+
+## Хранение данных
+
+Единственное хранилище — файл SQLite `data/channels.db` рядом с рабочим каталогом процесса. Две таблицы:
+
+- `channel_settings` — настройки канала: текст маркировки (`foreignAgentBlurb`) и список получателей уведомлений (`notificationUserIds`). Хранятся одним JSON-блобом в колонке `settings`, поэтому новые настройки не требуют миграции схемы.
+- `sessions` — состояние диалога с каждым пользователем, в том числе выбранный им канал.
+
+Миграций нет: обе таблицы создаются при старте через `CREATE TABLE IF NOT EXISTS`. Резервная копия — это просто копия файла `channels.db` (или `/dump_db`, если задан `BOT_OWNER_ID`).
+
+## Структура проекта
 
 ```
 rf-compliance-bot/
 ├── src/
-│   ├── index.ts      # Entry point: wiring, registration, graceful shutdown
-│   ├── commands/     # Command handlers; definitions.ts is the source of truth
-│   ├── config/       # Bot instance, session, Sentry, environment
-│   ├── db/           # SQLite database and session storage adapter
-│   ├── handlers/     # Message/channel post handling and error reporting
-│   ├── notifications/# Rejection notification fan-out
-│   └── utils/        # Media group batching, rich text flattening
-├── tests/            # Test files
-├── .env.example      # Environment variables template
-├── bunfig.toml       # Bun test configuration
-├── tsconfig.json     # TypeScript configuration
-├── eslint.config.js  # ESLint configuration
-└── .prettierrc       # Prettier configuration
+│   ├── index.ts       # Точка входа: подключение, регистрация, корректное завершение
+│   ├── utils.ts       # Разбор каналов, проверка требований и прав
+│   ├── commands/      # Команды; definitions.ts — единственный источник правды
+│   ├── config/        # Экземпляр бота, сессии, Sentry, переменные окружения
+│   ├── db/            # SQLite и адаптер хранения сессий
+│   ├── handlers/      # Обработка сообщений и постов канала, отчёты об ошибках
+│   ├── notifications/ # Рассылка уведомлений об отклонённых сообщениях
+│   └── utils/         # Сборка альбомов, разворачивание rich-текста
+├── tests/             # Тесты
+├── .github/workflows/ # CI: линтер, форматирование, тесты
+├── .env.example       # Шаблон переменных окружения
+├── bunfig.toml        # Настройки тестов Bun
+├── tsconfig.json      # Настройки TypeScript
+├── eslint.config.js   # Настройки ESLint
+└── .prettierrc        # Настройки Prettier
 ```
 
-## Bot Commands
+## Разработка
 
-- `/start` - Start the bot and see welcome message
-- `/help` - Show available commands
-- `/info` - Show the current configuration, channel requirements and your permissions
-- `/setchannel`, `/removechannel` - Configure the channel to publish to (hidden when `FIXED_CHANNEL_ID` is set)
-- `/set_fa_blurb` - Configure the foreign-agent disclosure for the current channel
-- `/notify_add`, `/notify_remove`, `/notify_list` - Maintain the admins that receive moderation notifications
-- `/dump_db` - Send the SQLite database to the owner; only registered when `BOT_OWNER_ID` is set
-
-## Channel Moderation
-
-- The bot listens to posts that appear directly in a configured channel. If the text or caption does not contain the configured foreign-agent blurb, the bot copies the offending message to the notification list, attempts to DM the author, and removes the post from the channel.
-- Make sure the blurb is configured with `/set_fa_blurb` for every moderated channel; otherwise the compliance check is skipped.
-- Grant the bot administrator rights with **Post Messages** and **Delete Messages** so it can remove non-compliant posts and deliver notifications.
-- Use `/notify_add` to enlist channel administrators who should be notified when a message is rejected. The bot will exclude the posting user from the fan-out to avoid duplicate notifications.
-- Telegram only includes the author ID for certain channel posts. When that identifier is unavailable, the bot still removes the message and notifies the subscribed administrators.
-
-## Testing
-
-Run tests with:
 ```bash
-bun test
+bun run dev            # запуск с автоперезапуском
+bun test               # тесты (покрытие включено в bunfig.toml)
+bun run lint           # ESLint
+bun run format         # Prettier
 ```
 
-Run tests with coverage:
-```bash
-bun run test:coverage
-```
+Подробнее — в [CONTRIBUTING.md](CONTRIBUTING.md).
 
-## Deployment
+## Лицензия
 
-1. Set your production environment variables
-
-2. Run the bot:
-   ```bash
-   bun run start
-   ```
-
-The bot runs straight from TypeScript source, so there is no build step. For containers see
-the `deploy-docker` skill — the `data/` volume is what keeps channel settings and sessions
-across restarts.
-
-## Environment Variables
-
-| Variable | Description | Required |
-|----------|-------------|----------|
-| `TELEGRAM_BOT_TOKEN` | Your Telegram bot token from BotFather | Yes |
-| `NODE_ENV` | Environment (development/production) | No |
-| `FIXED_CHANNEL_ID` | Pins every user to this channel and unregisters `/setchannel` and `/removechannel` | No |
-| `BOT_OWNER_ID` | Numeric user ID allowed to run `/dump_db`, which sends the whole SQLite database over Telegram. Leave unset to keep the command disabled | No |
-| `SENTRY_DSN` | Sentry DSN; error tracking is disabled when unset | No |
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Run tests and linting
-5. Submit a pull request
-
-## License
-
-This project was created using `bun init` in Bun v1.2.23.
+[MIT](LICENSE).
