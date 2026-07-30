@@ -2,7 +2,7 @@ name: CI
 
 on:
     push:
-        branches: [main, claude/russian-docs-improvements-5iwtvl]
+        branches: [main]
     pull_request:
     workflow_dispatch:
 
