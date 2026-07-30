@@ -32,7 +32,6 @@ A Telegram bot built with TypeScript and Bun for RF compliance information and r
 
 - `bun run dev` - Start the bot in development mode with hot reload
 - `bun run start` - Start the bot in production mode
-- `bun run build` - Build the bot for production
 - `bun run test` - Run tests
 - `bun run test:coverage` - Run tests with coverage report
 - `bun run lint` - Lint the code
@@ -44,10 +43,15 @@ A Telegram bot built with TypeScript and Bun for RF compliance information and r
 
 ```
 rf-compliance-bot/
-├── src/              # Source code
-│   └── index.ts      # Main bot file
+├── src/
+│   ├── index.ts      # Entry point: wiring, registration, graceful shutdown
+│   ├── commands/     # Command handlers; definitions.ts is the source of truth
+│   ├── config/       # Bot instance, session, Sentry, environment
+│   ├── db/           # SQLite database and session storage adapter
+│   ├── handlers/     # Message/channel post handling and error reporting
+│   ├── notifications/# Rejection notification fan-out
+│   └── utils/        # Media group batching, rich text flattening
 ├── tests/            # Test files
-│   └── bot.test.ts   # Bot tests
 ├── .env.example      # Environment variables template
 ├── bunfig.toml       # Bun test configuration
 ├── tsconfig.json     # TypeScript configuration
@@ -59,8 +63,11 @@ rf-compliance-bot/
 
 - `/start` - Start the bot and see welcome message
 - `/help` - Show available commands
+- `/info` - Show the current configuration, channel requirements and your permissions
+- `/setchannel`, `/removechannel` - Configure the channel to publish to (hidden when `FIXED_CHANNEL_ID` is set)
 - `/set_fa_blurb` - Configure the foreign-agent disclosure for the current channel
 - `/notify_add`, `/notify_remove`, `/notify_list` - Maintain the admins that receive moderation notifications
+- `/dump_db` - Send the SQLite database to the owner; only registered when `BOT_OWNER_ID` is set
 
 ## Channel Moderation
 
@@ -84,17 +91,16 @@ bun run test:coverage
 
 ## Deployment
 
-1. Build the bot:
-   ```bash
-   bun run build
-   ```
+1. Set your production environment variables
 
-2. Set your production environment variables
-
-3. Run the bot:
+2. Run the bot:
    ```bash
    bun run start
    ```
+
+The bot runs straight from TypeScript source, so there is no build step. For containers see
+the `deploy-docker` skill — the `data/` volume is what keeps channel settings and sessions
+across restarts.
 
 ## Environment Variables
 
@@ -102,6 +108,9 @@ bun run test:coverage
 |----------|-------------|----------|
 | `TELEGRAM_BOT_TOKEN` | Your Telegram bot token from BotFather | Yes |
 | `NODE_ENV` | Environment (development/production) | No |
+| `FIXED_CHANNEL_ID` | Pins every user to this channel and unregisters `/setchannel` and `/removechannel` | No |
+| `BOT_OWNER_ID` | Numeric user ID allowed to run `/dump_db`, which sends the whole SQLite database over Telegram. Leave unset to keep the command disabled | No |
+| `SENTRY_DSN` | Sentry DSN; error tracking is disabled when unset | No |
 
 ## Contributing
 

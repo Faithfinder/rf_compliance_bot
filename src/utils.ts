@@ -1,6 +1,31 @@
 import { FormattedString, code, fmt } from "@grammyjs/parse-mode";
 import { bot } from "./config/bot";
+import { isFixedChannelMode } from "./config/environment";
 import { getChannelSettings } from "./db/database";
+
+/**
+ * Text shown when no channel is configured. In fixed-channel mode /setchannel is never
+ * registered, so pointing the user at it would be a dead end.
+ */
+export function formatNoChannelMessage(): string {
+    if (isFixedChannelMode()) {
+        return "Канал для публикации не настроен. Обратитесь к администратору бота.";
+    }
+
+    return (
+        "Вы еще не настроили канал.\n\n" +
+        "Используйте /setchannel <@channel или ID> для настройки.\n" +
+        "Пример: /setchannel @mychannel"
+    );
+}
+
+/**
+ * Trailing hint offering to reconfigure the channel, omitted in fixed-channel mode where the
+ * user cannot change it.
+ */
+export function formatChangeChannelHint(): string {
+    return isFixedChannelMode() ? "" : "\n\nИли используйте /setchannel для настройки другого канала";
+}
 
 interface ChannelInfo {
     id: string;
@@ -88,8 +113,7 @@ export async function checkChannelRequirements(channelId: string): Promise<Chann
     }
 
     try {
-        const botInfo = await bot.api.getMe();
-        const botMember = await bot.api.getChatMember(channelId, botInfo.id);
+        const botMember = await bot.api.getChatMember(channelId, bot.botInfo.id);
 
         requirements.botIsAdded = botMember.status === "administrator" || botMember.status === "creator";
 

@@ -190,6 +190,37 @@ describe("extractRichMessageText", () => {
         expect(extractRichMessageText(richMessage)).toBe("Новый блок\nВложенный абзац\nПодпись");
     });
 
+    test("should survive unknown blocks whose blocks/items are not arrays", () => {
+        const richMessage = createRichMessage([
+            { type: "poll", items: ["Да", "Нет"] } as unknown as RichBlock,
+            { type: "widget", blocks: { inner: 1 } } as unknown as RichBlock,
+            { type: "future_block", text: "Виден" } as unknown as RichBlock,
+        ]);
+
+        expect(extractRichMessageText(richMessage)).toBe("Виден");
+    });
+
+    test("should read captions given as bare rich text", () => {
+        const richMessage = createRichMessage([
+            { type: "future_media", caption: "Подпись строкой" } as unknown as RichBlock,
+            { type: "future_media", caption: ["Подпись ", { type: "bold", text: "массивом" }] } as unknown as RichBlock,
+        ]);
+
+        expect(extractRichMessageText(richMessage)).toBe("Подпись строкой\nПодпись массивом");
+    });
+
+    test("should read the bare rich text caption of a table", () => {
+        const richMessage = createRichMessage([
+            {
+                type: "table",
+                cells: [[{ text: "Ячейка" }]],
+                caption: "Подпись таблицы",
+            } as unknown as RichBlock,
+        ]);
+
+        expect(extractRichMessageText(richMessage)).toBe("Ячейка\nПодпись таблицы");
+    });
+
     test("should return an empty string for a message without text content", () => {
         const richMessage = createRichMessage([{ type: "divider" }, { type: "anchor", name: "top" }]);
 
