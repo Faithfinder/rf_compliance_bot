@@ -57,6 +57,8 @@ The bot uses a modular architecture with separate concerns:
 - **Notifications**: [src/notifications/](src/notifications/) - notification dispatching logic
   - `rejection.ts` - Builds and dispatches rejection notifications to administrators
 - **Utilities**: [src/utils.ts](src/utils.ts) - channel resolution and formatting utilities
+  - [src/utils/media-groups.ts](src/utils/media-groups.ts) - album (media group) buffering and validation
+  - [src/utils/rich-text.ts](src/utils/rich-text.ts) - flattens rich messages (`Message.rich_message`) into plain text
 
 ### Key Patterns
 
@@ -211,6 +213,11 @@ That's it! The command will automatically be:
   - `checkUserChannelPermissions(channelId, userId)` - Verifies user's admin status and permissions
   - `checkChannelRequirements(channelId)` - Checks if channel meets all bot requirements (exists, bot added, bot can post, settings configured)
   - `formatChannelInfo()`, `formatChannelRequirements()`, `allRequirementsPassed()` - Display formatting utilities
+- Compliance checking is centralized in [src/handlers/message-helpers.ts](src/handlers/message-helpers.ts):
+  - `extractMessageText(message)` - Returns the text to check: rich message content (`rich_message`), `text`, `caption`, or a poll question
+  - Rich messages (Bot API rich text: headings, lists, tables, quotations, collapsible blocks, media blocks, formulas) carry no `text` field, so their blocks are flattened by `extractRichMessageText()` before matching the blurb
+  - For rich messages the blurb is matched a second time with whitespace collapsed, because block structure does not preserve the line breaks of the configured blurb
+  - Compliant rich messages are published with `copyMessage`, which keeps their formatting intact
 - Rejection notifications are sent automatically when a user's message is rejected for missing foreign agent text
   - Configured via `/notify_add`, `/notify_remove`, and `/notify_list` commands
   - Only channel administrators with `canManageChat` permission can manage the notification list

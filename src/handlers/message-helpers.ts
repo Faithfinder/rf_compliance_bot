@@ -1,6 +1,7 @@
 import * as Sentry from "@sentry/bun";
 import type { Message } from "grammy/types";
 import { dispatchRejectionNotifications } from "../notifications/rejection";
+import { extractRichMessageText } from "../utils/rich-text";
 
 export interface MessageActor {
     id?: number;
@@ -26,21 +27,38 @@ export function extractMessageActor(message: Message): MessageActor | undefined 
     return undefined;
 }
 
-function extractMessageText(message: Message): string {
+export function extractMessageText(message: Message): string {
+    if (message.rich_message) {
+        return extractRichMessageText(message.rich_message);
+    }
+
     return message.text ?? message.caption ?? message.poll?.question ?? "";
+}
+
+function normalizeWhitespace(value: string): string {
+    return value.replace(/\s+/g, " ").trim();
 }
 
 export function validateMessageCompliance(message: Message, requiredBlurb: string): boolean {
     const text = extractMessageText(message);
-    return text.includes(requiredBlurb);
+
+    if (text.includes(requiredBlurb)) {
+        return true;
+    }
+
+    // Rich messages are structured blocks rather than a flat string, so the line breaks we
+    // reconstruct don't have to match the ones in the configured blurb. Compare again ignoring
+    // whitespace differences to avoid rejecting a message that visibly contains the blurb.
+    if (message.rich_message) {
+        return normalizeWhitespace(text).includes(normalizeWhitespace(requiredBlurb));
+    }
+
+    return false;
 }
 
 export function createMediaGroupValidator(requiredBlurb: string) {
     return (messages: Message[]): boolean => {
-        return messages.some((msg) => {
-            const text = extractMessageText(msg);
-            return text.includes(requiredBlurb);
-        });
+        return messages.some((msg) => validateMessageCompliance(msg, requiredBlurb));
     };
 }
 
