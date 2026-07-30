@@ -84,6 +84,87 @@ describe("validateMessageCompliance", () => {
         const msg = createMockMessage();
         expect(messageHelpers.validateMessageCompliance(msg, BLURB)).toBe(false);
     });
+
+    test("should pass for rich message with the blurb in a paragraph", () => {
+        const msg = createMockMessage({
+            rich_message: {
+                blocks: [
+                    { type: "heading", text: "Новость дня", size: 2 },
+                    { type: "paragraph", text: BLURB },
+                ],
+            },
+        });
+        expect(messageHelpers.validateMessageCompliance(msg, BLURB)).toBe(true);
+    });
+
+    test("should pass for rich message with the blurb split by inline formatting", () => {
+        const msg = createMockMessage({
+            rich_message: {
+                blocks: [
+                    {
+                        type: "paragraph",
+                        text: ["Данное сообщение создано ", { type: "bold", text: "иностранным агентом" }],
+                    },
+                ],
+            },
+        });
+        expect(messageHelpers.validateMessageCompliance(msg, BLURB)).toBe(true);
+    });
+
+    test("should pass for rich message with the blurb in a footer", () => {
+        const msg = createMockMessage({
+            rich_message: {
+                blocks: [
+                    { type: "paragraph", text: "Новость дня." },
+                    { type: "footer", text: BLURB },
+                ],
+            },
+        });
+        expect(messageHelpers.validateMessageCompliance(msg, BLURB)).toBe(true);
+    });
+
+    test("should pass for rich message with the blurb split across blocks", () => {
+        const msg = createMockMessage({
+            rich_message: {
+                blocks: [
+                    { type: "paragraph", text: "Данное сообщение создано" },
+                    { type: "paragraph", text: "иностранным агентом" },
+                ],
+            },
+        });
+        expect(messageHelpers.validateMessageCompliance(msg, BLURB)).toBe(true);
+    });
+
+    test("should fail for rich message without the blurb", () => {
+        const msg = createMockMessage({
+            rich_message: {
+                blocks: [
+                    { type: "heading", text: "Новость дня", size: 2 },
+                    { type: "paragraph", text: "Обычный текст без предупреждения." },
+                ],
+            },
+        });
+        expect(messageHelpers.validateMessageCompliance(msg, BLURB)).toBe(false);
+    });
+
+    test("should not relax whitespace matching for plain text messages", () => {
+        const msg = createMockMessage({ text: "Данное сообщение создано\nиностранным агентом" });
+        expect(messageHelpers.validateMessageCompliance(msg, BLURB)).toBe(false);
+    });
+});
+
+describe("extractMessageText", () => {
+    test("should prefer rich message content over other fields", () => {
+        const msg = createMockMessage({
+            rich_message: { blocks: [{ type: "paragraph", text: "Богатый текст" }] },
+        });
+        expect(messageHelpers.extractMessageText(msg)).toBe("Богатый текст");
+    });
+
+    test("should fall back to caption for media messages", () => {
+        const msg = createMockMessage({ caption: "Подпись" });
+        expect(messageHelpers.extractMessageText(msg)).toBe("Подпись");
+    });
 });
 
 describe("createMediaGroupValidator", () => {
