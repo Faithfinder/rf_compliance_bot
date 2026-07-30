@@ -23,13 +23,11 @@ export function registerInfoCommand(): void {
 
         sections.push(fmt`🤖 ${fmt`${b}Конфигурация бота${b}`}`);
 
-        const usernamePart =
-            ctx.from.username ?
-                fmt` (@${ctx.from.username})`
-            : undefined;
-        const userLine = usernamePart ?
-            fmt`👤 ${fmt`${b}Пользователь:${b}`} ${ctx.from.first_name}${usernamePart}`
-        :   fmt`👤 ${fmt`${b}Пользователь:${b}`} ${ctx.from.first_name}`;
+        const usernamePart = ctx.from.username ? fmt` (@${ctx.from.username})` : undefined;
+        const userLine =
+            usernamePart ?
+                fmt`👤 ${fmt`${b}Пользователь:${b}`} ${ctx.from.first_name}${usernamePart}`
+            :   fmt`👤 ${fmt`${b}Пользователь:${b}`} ${ctx.from.first_name}`;
         const userIdLine = fmt`📱 ${fmt`${b}ID пользователя:${b}`} ${fmt`${code}${String(userId)}${code}`}`;
         sections.push(FormattedString.join([userLine, userIdLine], "\n"));
 

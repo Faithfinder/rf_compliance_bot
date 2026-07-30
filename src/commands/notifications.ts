@@ -122,10 +122,9 @@ async function handleUserSelection(
         const action = operation === "add" ? "добавления" : "удаления";
         const preposition = operation === "add" ? "в" : "из";
 
-        return ctx.reply(
-            `👤 Пожалуйста, выберите администратора для ${action} ${preposition} списка уведомлений.`,
-            { reply_markup: keyboard },
-        );
+        return ctx.reply(`👤 Пожалуйста, выберите администратора для ${action} ${preposition} списка уведомлений.`, {
+            reply_markup: keyboard,
+        });
     }
 
     const targetIdentifier = (args as string).trim();

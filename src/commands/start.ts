@@ -15,9 +15,7 @@ export function registerStartCommand(): void {
             ctx.session.awaitingChannelSelection = true;
 
             await ctx.reply(welcomeMessage);
-            const setupPrompt =
-                `Для начала работы настройте канал, куда я буду публиковать ваши сообщения:\n\n` +
-                text;
+            const setupPrompt = `Для начала работы настройте канал, куда я буду публиковать ваши сообщения:\n\n` + text;
             return ctx.reply(setupPrompt, {
                 reply_markup: keyboard,
             });
