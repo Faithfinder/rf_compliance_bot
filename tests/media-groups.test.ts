@@ -203,4 +203,34 @@ describe("Media Groups", () => {
 
         expect(onComplete).toHaveBeenCalledTimes(0);
     });
+
+    // The debounce timer runs outside grammY's middleware, so anything escaping it would be an
+    // unhandled rejection and would terminate the process rather than fail a single update.
+    test("should contain a rejecting onComplete instead of crashing the process", async () => {
+        const onComplete = mock(() => Promise.reject(new Error("Bad Request: message to copy not found")));
+        const validateGroup = mock(() => false);
+
+        addMessageToGroup("test-group-1", createMockMessage(1), onComplete, validateGroup);
+
+        await new Promise((resolve) => setTimeout(resolve, 250));
+
+        expect(onComplete).toHaveBeenCalledTimes(1);
+        expect(isMediaGroupValidated("test-group-1")).toBe(true);
+        expect(getMediaGroupApproval("test-group-1")).toBe(false);
+    });
+
+    test("should contain a throwing validateGroup instead of crashing the process", async () => {
+        const onComplete = mock();
+        const validateGroup = mock(() => {
+            throw new TypeError("undefined is not an object (evaluating 'blocks')");
+        });
+
+        addMessageToGroup("test-group-2", createMockMessage(1), onComplete, validateGroup);
+
+        await new Promise((resolve) => setTimeout(resolve, 250));
+
+        expect(validateGroup).toHaveBeenCalledTimes(1);
+        expect(onComplete).toHaveBeenCalledTimes(0);
+        expect(isMediaGroupValidated("test-group-2")).toBe(false);
+    });
 });

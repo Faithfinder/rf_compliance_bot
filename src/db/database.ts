@@ -84,7 +84,14 @@ export function getChannelSettings(channelId: string): ChannelSettingsData | nul
         return null;
     }
 
-    return JSON.parse(result.settings) as ChannelSettingsData;
+    // A malformed blob would otherwise throw on every message for this channel, including
+    // from the media group timer where there is no middleware to catch it.
+    try {
+        return JSON.parse(result.settings) as ChannelSettingsData;
+    } catch (error) {
+        console.error(`Malformed settings blob for channel ${channelId}, treating as unconfigured:`, error);
+        return null;
+    }
 }
 
 export function updateChannelSettings(channelId: string, settings: Partial<ChannelSettingsData>): void {

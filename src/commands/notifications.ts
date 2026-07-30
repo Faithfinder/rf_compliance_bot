@@ -3,7 +3,12 @@ import { Keyboard } from "grammy";
 import { bot } from "../config/bot";
 import type { SessionContext } from "../config/session";
 import { addNotificationUser, removeNotificationUser, getNotificationUsers } from "../db/database";
-import { checkUserChannelPermissions, formatChannelInfo, resolveUserIdentifier } from "../utils";
+import {
+    checkUserChannelPermissions,
+    formatChannelInfo,
+    formatNoChannelMessage,
+    resolveUserIdentifier,
+} from "../utils";
 
 interface ValidationResult {
     success: boolean;
@@ -33,11 +38,7 @@ async function validateNotificationAccess(
     const channelConfig = ctx.session.channelConfig;
 
     if (!channelConfig) {
-        await ctx.reply(
-            "Вы еще не настроили канал.\n\n" +
-                "Используйте /setchannel <@channel или ID> для настройки.\n" +
-                "Пример: /setchannel @mychannel",
-        );
+        await ctx.reply(formatNoChannelMessage());
         return { success: false };
     }
 

@@ -2,7 +2,7 @@ import type { RichBlock, RichBlockCaption, RichBlockListItem, RichMessage, RichT
 
 /** Concatenates the visible text of a rich text node, dropping formatting information. */
 export function flattenRichText(text: RichText | undefined): string {
-    if (text === undefined) {
+    if (text === undefined || text === null) {
         return "";
     }
 
@@ -28,8 +28,15 @@ export function flattenRichText(text: RichText | undefined): string {
     }
 }
 
-function collectCaption(caption: RichBlockCaption | undefined, lines: string[]): void {
-    if (!caption) {
+function collectCaption(caption: RichBlockCaption | RichText | undefined, lines: string[]): void {
+    if (caption === undefined || caption === null) {
+        return;
+    }
+
+    // `RichBlockTable.caption` is a bare RichText rather than a RichBlockCaption, so a caption
+    // can legitimately arrive in either shape and unknown blocks may use either one.
+    if (typeof caption === "string" || Array.isArray(caption) || "type" in caption) {
+        lines.push(flattenRichText(caption));
         return;
     }
 
@@ -40,9 +47,13 @@ function collectCaption(caption: RichBlockCaption | undefined, lines: string[]):
     }
 }
 
-function collectListItems(items: RichBlockListItem[], lines: string[]): void {
+function collectListItems(items: RichBlockListItem[] | undefined, lines: string[]): void {
+    if (!Array.isArray(items)) {
+        return;
+    }
+
     for (const item of items) {
-        collectBlocks(item.blocks, lines);
+        collectBlocks(item?.blocks, lines);
     }
 }
 
@@ -83,9 +94,7 @@ function collectBlock(block: RichBlock, lines: string[]): void {
             for (const row of block.cells) {
                 lines.push(row.map((cell) => flattenRichText(cell.text)).join(" "));
             }
-            if (block.caption !== undefined) {
-                lines.push(flattenRichText(block.caption));
-            }
+            collectCaption(block.caption, lines);
             break;
         case "mathematical_expression":
             lines.push(block.expression);
@@ -102,12 +111,14 @@ function collectBlock(block: RichBlock, lines: string[]): void {
             // Telegram keeps adding block types, and missing the text of an unknown one would
             // reject a compliant message. Every text-bearing block published so far exposes its
             // content through these fields, so fall back to reading them structurally.
+            // Nothing here can assume the declared shape actually holds, so every nested
+            // container is checked by collectBlocks/collectListItems before being iterated.
             const unknownBlock = block as {
                 text?: RichText;
                 summary?: RichText;
                 blocks?: RichBlock[];
                 items?: RichBlockListItem[];
-                caption?: RichBlockCaption;
+                caption?: RichBlockCaption | RichText;
             };
 
             if (unknownBlock.summary !== undefined) {
@@ -118,23 +129,23 @@ function collectBlock(block: RichBlock, lines: string[]): void {
                 lines.push(flattenRichText(unknownBlock.text));
             }
 
-            if (unknownBlock.blocks) {
-                collectBlocks(unknownBlock.blocks, lines);
-            }
-
-            if (unknownBlock.items) {
-                collectListItems(unknownBlock.items, lines);
-            }
-
+            collectBlocks(unknownBlock.blocks, lines);
+            collectListItems(unknownBlock.items, lines);
             collectCaption(unknownBlock.caption, lines);
             break;
         }
     }
 }
 
-function collectBlocks(blocks: RichBlock[], lines: string[]): void {
+function collectBlocks(blocks: RichBlock[] | undefined, lines: string[]): void {
+    if (!Array.isArray(blocks)) {
+        return;
+    }
+
     for (const block of blocks) {
-        collectBlock(block, lines);
+        if (block && typeof block === "object") {
+            collectBlock(block, lines);
+        }
     }
 }
 
@@ -145,7 +156,7 @@ function collectBlocks(blocks: RichBlock[], lines: string[]): void {
 export function extractRichMessageText(richMessage: RichMessage): string {
     const lines: string[] = [];
 
-    collectBlocks(richMessage.blocks ?? [], lines);
+    collectBlocks(richMessage.blocks, lines);
 
     return lines.filter((line) => line.length > 0).join("\n");
 }

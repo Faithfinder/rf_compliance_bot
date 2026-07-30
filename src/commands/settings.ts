@@ -1,7 +1,7 @@
 import { b, fmt, i } from "@grammyjs/parse-mode";
 import { bot } from "../config/bot";
 import { getChannelSettings, updateChannelSettings } from "../db/database";
-import { checkUserChannelPermissions, formatChannelInfo } from "../utils";
+import { checkUserChannelPermissions, formatChannelInfo, formatNoChannelMessage } from "../utils";
 
 export function registerSettingsCommand(): void {
     bot.command("set_fa_blurb", async (ctx) => {
@@ -14,11 +14,7 @@ export function registerSettingsCommand(): void {
         const channelConfig = ctx.session.channelConfig;
 
         if (!channelConfig) {
-            return ctx.reply(
-                "Вы еще не настроили канал.\n\n" +
-                    "Используйте /setchannel <@channel или ID> для настройки.\n" +
-                    "Пример: /setchannel @mychannel",
-            );
+            return ctx.reply(formatNoChannelMessage());
         }
 
         const args = ctx.match;

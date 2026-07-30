@@ -1,6 +1,6 @@
 import * as Sentry from "@sentry/bun";
 import type { Message } from "grammy/types";
-import { dispatchRejectionNotifications } from "../notifications/rejection";
+import { dispatchRejectionNotifications, type RejectionNotificationResult } from "../notifications/rejection";
 import { extractRichMessageText } from "../utils/rich-text";
 
 export interface MessageActor {
@@ -72,7 +72,9 @@ export interface RejectionNotificationParams {
     includeAuthor?: boolean;
 }
 
-export async function handleRejectionWithNotifications(params: RejectionNotificationParams): Promise<void> {
+export async function handleRejectionWithNotifications(
+    params: RejectionNotificationParams,
+): Promise<RejectionNotificationResult> {
     const notificationsResult = await dispatchRejectionNotifications(params);
 
     if (notificationsResult.failedTargets > 0) {
@@ -80,6 +82,8 @@ export async function handleRejectionWithNotifications(params: RejectionNotifica
             `Failed to notify ${notificationsResult.failedTargets} recipients about rejection in channel ${params.channelId}.`,
         );
     }
+
+    return notificationsResult;
 }
 
 export interface SentryChannelPostContext {

@@ -1,3 +1,4 @@
+import * as Sentry from "@sentry/bun";
 import type { Message } from "grammy/types";
 
 interface MediaGroupMessage {
@@ -32,6 +33,19 @@ function cleanupExpiredGroups(): void {
 
 setInterval(cleanupExpiredGroups, 60 * 1000);
 
+function reportMediaGroupError(error: unknown, mediaGroupId: string, messageCount: number): void {
+    console.error("Failed to process media group:", error);
+
+    Sentry.withScope((scope) => {
+        scope.setContext("media_group", {
+            media_group_id: mediaGroupId,
+            message_count: messageCount,
+        });
+        scope.setTag("error_type", "media_group_processing_failed");
+        Sentry.captureException(error);
+    });
+}
+
 export interface MediaGroupValidationResult {
     isComplete: boolean;
     approved?: boolean;
@@ -64,14 +78,23 @@ export function addMessageToGroup(
         clearTimeout(groupData.timerId);
     }
 
-    groupData.timerId = setTimeout(async () => {
-        const allMessages = groupData!.messages.map((m) => m.message);
-        const approved = validateGroup(allMessages);
+    // This runs outside grammY's middleware, so `bot.catch` never sees what is thrown here.
+    // Anything escaping would be an unhandled rejection, which terminates the Bun process.
+    groupData.timerId = setTimeout(() => {
+        void (async () => {
+            const allMessages = groupData!.messages.map((m) => m.message);
 
-        groupData!.validated = true;
-        groupData!.approved = approved;
+            try {
+                const approved = validateGroup(allMessages);
 
-        await onComplete(allMessages, approved);
+                groupData!.validated = true;
+                groupData!.approved = approved;
+
+                await onComplete(allMessages, approved);
+            } catch (error) {
+                reportMediaGroupError(error, mediaGroupId, allMessages.length);
+            }
+        })();
     }, DEBOUNCE_MS);
 
     if (groupData.validated) {

@@ -7,7 +7,10 @@ import {
     checkChannelRequirements,
     formatChannelRequirements,
     checkUserChannelPermissions,
+    formatNoChannelMessage,
+    formatChangeChannelHint,
 } from "../utils";
+import { isFixedChannelMode } from "../config/environment";
 import { getChannelSettings } from "../db/database";
 import { addMessageToGroup, isMediaGroupValidated } from "../utils/media-groups";
 import {
@@ -30,11 +33,7 @@ export function registerMessageHandler(): void {
         const channelConfig = ctx.session.channelConfig;
 
         if (!channelConfig) {
-            return ctx.reply(
-                "Вы еще не настроили канал.\n\n" +
-                    "Используйте /setchannel <@channel или ID> для настройки.\n" +
-                    "Пример: /setchannel @mychannel",
-            );
+            return ctx.reply(formatNoChannelMessage());
         }
 
         const permissions = await checkUserChannelPermissions(channelConfig.channelId, userId);
@@ -105,7 +104,7 @@ export function registerMessageHandler(): void {
                                 errorMessage = fmt`${errorMessage}${fmt`${b}Следующий шаг:${b}`} Попросите администратора канала предоставить боту разрешение "Публиковать сообщения".`;
                             }
 
-                            errorMessage = fmt`${errorMessage}\n\nИли используйте /setchannel для настройки другого канала`;
+                            errorMessage = fmt`${errorMessage}${formatChangeChannelHint()}`;
 
                             const entities = errorMessage.entities;
                             await ctx.api.sendMessage(
@@ -133,10 +132,7 @@ export function registerMessageHandler(): void {
                             excludeUserIds: [userId],
                         });
 
-                        let errorMessage = fmt`❌ Невозможно опубликовать альбом: Ваше сообщение должно содержать текст иностранного агента.\n\n🌍 ${fmt`${b}Необходимый текст:${b}`}\n${foreignAgentBlurb}\n\nПожалуйста, добавьте этот текст к вашему сообщению и повторите попытку.\nОригинальное сообщение:`;
-
-                        const messageIds = messages.map((m) => m.message_id).sort((a, b) => a - b);
-                        await ctx.api.copyMessages(ctx.chat.id, ctx.chat.id, messageIds);
+                        const errorMessage = fmt`❌ Невозможно опубликовать альбом: Ваше сообщение должно содержать текст иностранного агента.\n\n🌍 ${fmt`${b}Необходимый текст:${b}`}\n${foreignAgentBlurb}\n\nПожалуйста, добавьте этот текст к вашему сообщению и повторите попытку.\nОригинальное сообщение:`;
 
                         const entities = errorMessage.entities;
                         await ctx.api.sendMessage(
@@ -144,6 +140,15 @@ export function registerMessageHandler(): void {
                             errorMessage.text,
                             entities.length ? { entities } : undefined,
                         );
+
+                        // The echo is a convenience; losing it must not cost the user the
+                        // explanation above, and this runs outside grammY's error handling.
+                        try {
+                            const messageIds = messages.map((m) => m.message_id).sort((a, b) => a - b);
+                            await ctx.api.copyMessages(ctx.chat.id, ctx.chat.id, messageIds);
+                        } catch (error) {
+                            console.error("Failed to echo the rejected album back to the user:", error);
+                        }
                     }
                 },
                 createMediaGroupValidator(foreignAgentBlurb),
@@ -166,12 +171,12 @@ export function registerMessageHandler(): void {
                 excludeUserIds: [userId],
             });
 
-            let errorMessage = fmt`❌ Невозможно опубликовать сообщение: Ваше сообщение должно содержать текст иностранного агента.\n\n🌍 ${fmt`${b}Необходимый текст:${b}`}\n${foreignAgentBlurb}\n\nПожалуйста, добавьте этот текст к вашему сообщению и повторите попытку.\nОригинальное сообщение:`;
-
-            await ctx.api.copyMessage(ctx.chat.id, ctx.chat.id, ctx.message.message_id);
+            const errorMessage = fmt`❌ Невозможно опубликовать сообщение: Ваше сообщение должно содержать текст иностранного агента.\n\n🌍 ${fmt`${b}Необходимый текст:${b}`}\n${foreignAgentBlurb}\n\nПожалуйста, добавьте этот текст к вашему сообщению и повторите попытку.\nОригинальное сообщение:`;
 
             const entities = errorMessage.entities;
-            return await ctx.reply(errorMessage.text, entities.length ? { entities } : undefined);
+            await ctx.reply(errorMessage.text, entities.length ? { entities } : undefined);
+
+            return ctx.api.copyMessage(ctx.chat.id, ctx.chat.id, ctx.message.message_id);
         }
 
         try {
@@ -195,30 +200,38 @@ export function registerMessageHandler(): void {
             let errorMessage = fmt`❌ Не удалось опубликовать сообщение в ${formatChannelInfo(channelConfig.channelId, channelConfig.channelTitle)}\n\n📋 Требования:\n${formatChannelRequirements(requirements)}\n\n`;
 
             if (!requirements.channelExists) {
-                errorMessage = fmt`${errorMessage}${fmt`${b}Следующий шаг:${b}`} Канал больше не существует или бот не может получить к нему доступ. Пожалуйста, выберите другой канал.`;
+                errorMessage = fmt`${errorMessage}${fmt`${b}Следующий шаг:${b}`} Канал больше не существует или бот не может получить к нему доступ.`;
 
-                const keyboard = new Keyboard()
-                    .requestChat("Выбрать другой канал", 1, {
-                        chat_is_channel: true,
-                        bot_is_member: true,
-                    })
-                    .text("/removechannel")
-                    .resized()
-                    .oneTime();
+                // The channel selection handlers are only registered when the channel is not
+                // fixed, so offering the keyboard in fixed mode would produce dead buttons.
+                if (isFixedChannelMode()) {
+                    errorMessage = fmt`${errorMessage} Обратитесь к администратору бота.`;
+                } else {
+                    errorMessage = fmt`${errorMessage} Пожалуйста, выберите другой канал.`;
 
-                ctx.session.awaitingChannelSelection = true;
-                const entities = errorMessage.entities;
-                return ctx.reply(errorMessage.text, {
-                    reply_markup: keyboard,
-                    ...(entities.length ? { entities } : {}),
-                });
+                    const keyboard = new Keyboard()
+                        .requestChat("Выбрать другой канал", 1, {
+                            chat_is_channel: true,
+                            bot_is_member: true,
+                        })
+                        .text("/removechannel")
+                        .resized()
+                        .oneTime();
+
+                    ctx.session.awaitingChannelSelection = true;
+                    const entities = errorMessage.entities;
+                    return ctx.reply(errorMessage.text, {
+                        reply_markup: keyboard,
+                        ...(entities.length ? { entities } : {}),
+                    });
+                }
             } else if (!requirements.botIsAdded) {
                 errorMessage = fmt`${errorMessage}${fmt`${b}Следующий шаг:${b}`} Попросите администратора канала добавить этого бота в качестве администратора в канал.`;
             } else if (!requirements.botCanPost) {
                 errorMessage = fmt`${errorMessage}${fmt`${b}Следующий шаг:${b}`} Попросите администратора канала предоставить боту разрешение "Публиковать сообщения".`;
             }
 
-            errorMessage = fmt`${errorMessage}\n\nИли используйте /setchannel для настройки другого канала`;
+            errorMessage = fmt`${errorMessage}${formatChangeChannelHint()}`;
 
             const entities = errorMessage.entities;
             return ctx.reply(errorMessage.text, entities.length ? { entities } : undefined);
@@ -268,7 +281,7 @@ export function registerMessageHandler(): void {
 
                     const actor = extractMessageActor(firstMessage);
 
-                    await handleRejectionWithNotifications({
+                    const notifications = await handleRejectionWithNotifications({
                         channelId,
                         channelTitle,
                         rejectedMessageChatId: firstMessage.chat.id,
@@ -285,8 +298,8 @@ export function registerMessageHandler(): void {
                             channelId,
                             mediaGroupId,
                             messageCount: messages.length,
-                            notificationTargets: 0,
-                            notificationFailures: 0,
+                            notificationTargets: notifications.totalTargets,
+                            notificationFailures: notifications.failedTargets,
                         });
                     }
                 },
@@ -302,7 +315,7 @@ export function registerMessageHandler(): void {
 
         const actor = extractMessageActor(message);
 
-        await handleRejectionWithNotifications({
+        const notifications = await handleRejectionWithNotifications({
             channelId,
             channelTitle,
             rejectedMessageChatId: message.chat.id,
@@ -317,8 +330,8 @@ export function registerMessageHandler(): void {
             reportModerationError(error, {
                 channelId,
                 messageId: message.message_id,
-                notificationTargets: 0,
-                notificationFailures: 0,
+                notificationTargets: notifications.totalTargets,
+                notificationFailures: notifications.failedTargets,
             });
 
             return;
