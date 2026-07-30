@@ -44,14 +44,16 @@ describe("validateMessageCompliance", () => {
                 id: "poll-1",
                 question: `Ваше мнение? ${BLURB}`,
                 options: [
-                    { text: "Да", voter_count: 0 },
-                    { text: "Нет", voter_count: 0 },
+                    { text: "Да", voter_count: 0, persistent_id: "opt-yes" },
+                    { text: "Нет", voter_count: 0, persistent_id: "opt-no" },
                 ],
                 total_voter_count: 0,
                 is_closed: false,
                 is_anonymous: true,
                 type: "regular",
                 allows_multiple_answers: false,
+                allows_revoting: false,
+                members_only: false,
             },
         });
         expect(messageHelpers.validateMessageCompliance(msg, BLURB)).toBe(true);
@@ -63,14 +65,16 @@ describe("validateMessageCompliance", () => {
                 id: "poll-2",
                 question: "Ваше мнение?",
                 options: [
-                    { text: "Да", voter_count: 0 },
-                    { text: "Нет", voter_count: 0 },
+                    { text: "Да", voter_count: 0, persistent_id: "opt-yes" },
+                    { text: "Нет", voter_count: 0, persistent_id: "opt-no" },
                 ],
                 total_voter_count: 0,
                 is_closed: false,
                 is_anonymous: true,
                 type: "regular",
                 allows_multiple_answers: false,
+                allows_revoting: false,
+                members_only: false,
             },
         });
         expect(messageHelpers.validateMessageCompliance(msg, BLURB)).toBe(false);
@@ -93,14 +97,16 @@ describe("createMediaGroupValidator", () => {
                     id: "poll-3",
                     question: `Опрос. ${BLURB}`,
                     options: [
-                        { text: "Да", voter_count: 0 },
-                        { text: "Нет", voter_count: 0 },
+                        { text: "Да", voter_count: 0, persistent_id: "opt-yes" },
+                        { text: "Нет", voter_count: 0, persistent_id: "opt-no" },
                     ],
                     total_voter_count: 0,
                     is_closed: false,
                     is_anonymous: true,
                     type: "regular",
                     allows_multiple_answers: false,
+                    allows_revoting: false,
+                    members_only: false,
                 },
             }),
         ];
