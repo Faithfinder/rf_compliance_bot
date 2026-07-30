@@ -54,9 +54,7 @@ export interface RejectionNotificationParams {
     includeAuthor?: boolean;
 }
 
-export async function handleRejectionWithNotifications(
-    params: RejectionNotificationParams,
-): Promise<void> {
+export async function handleRejectionWithNotifications(params: RejectionNotificationParams): Promise<void> {
     const notificationsResult = await dispatchRejectionNotifications(params);
 
     if (notificationsResult.failedTargets > 0) {
@@ -83,10 +81,7 @@ export function reportChannelPostError(error: unknown, context: SentryChannelPos
             channel_title: context.channelTitle,
             ...(context.mediaGroupId && { media_group_id: context.mediaGroupId }),
         });
-        scope.setTag(
-            "error_type",
-            context.mediaGroupId ? "media_group_post_failed" : "channel_post_failed",
-        );
+        scope.setTag("error_type", context.mediaGroupId ? "media_group_post_failed" : "channel_post_failed");
         Sentry.captureException(error);
     });
 }

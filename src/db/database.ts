@@ -1,5 +1,6 @@
 import { Database } from "bun:sqlite";
-import { join } from "path";
+import { mkdirSync } from "fs";
+import { dirname, join } from "path";
 
 export interface ChannelSettingsData {
     foreignAgentBlurb?: string;
@@ -24,6 +25,11 @@ let db: Database | null = null;
 
 export function initializeDatabase(): void {
     const dbPath = join(process.cwd(), "data", "channels.db");
+
+    // bun:sqlite's `create` option creates the database file but not its parent
+    // directory, and data/ is gitignored — so it is absent on a fresh checkout.
+    mkdirSync(dirname(dbPath), { recursive: true });
+
     db = new Database(dbPath, { create: true });
 
     db.run(`

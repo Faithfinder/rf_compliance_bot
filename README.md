@@ -4,7 +4,7 @@ A Telegram bot built with TypeScript and Bun for RF compliance information and r
 
 ## Prerequisites
 
-- [Bun](https://bun.sh) v1.2.23 or higher
+- [Bun](https://bun.sh) v1.3.14 or higher
 - A Telegram Bot Token (obtain from [@BotFather](https://t.me/botfather))
 
 ## Setup

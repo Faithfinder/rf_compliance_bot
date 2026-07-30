@@ -33,9 +33,7 @@ describe("Rejection notifications", () => {
         expect(message.text).toContain("Test Channel (-1001234567890)");
         expect(message.text).toContain("👤 Пользователь: Moderator (@moderator)");
         expect(message.text).toContain("🆔 ID: 42");
-        expect(message.text).toContain(
-            `❌ Причина: ${rejectionModule.FOREIGN_AGENT_REJECTION_REASON}`,
-        );
+        expect(message.text).toContain(`❌ Причина: ${rejectionModule.FOREIGN_AGENT_REJECTION_REASON}`);
         expect(message.text).toContain("📝 Отклоненное сообщение:");
         expect(message.entities?.some((entity) => entity.type === "bold")).toBe(true);
         expect(message.entities?.some((entity) => entity.type === "code")).toBe(true);

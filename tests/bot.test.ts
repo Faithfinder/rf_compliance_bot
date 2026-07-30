@@ -13,9 +13,7 @@ describe("Utility Functions", () => {
 
         const formatted = formatChannelInfo(channelId, channelTitle);
         expect(formatted.text).toBe("Test Channel (-1001234567890)");
-        expect(formatted.entities).toEqual([
-            { type: "code", offset: 14, length: 14 },
-        ]);
+        expect(formatted.entities).toEqual([{ type: "code", offset: 14, length: 14 }]);
     });
 
     test("should format channel info without title", () => {
