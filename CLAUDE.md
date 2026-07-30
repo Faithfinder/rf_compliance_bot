@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Telegram bot that helps users avoid publishing messages without the required compliance ("foreign agent") text.
 
-**Language**: This is a Russian-language bot. All user-facing messages, commands, and responses must be in Russian.
+**Language**: This is a Russian-language bot. All user-facing messages, commands, and responses must be in Russian. `README.md` and `CONTRIBUTING.md` are in Russian too, deliberately — the audience is Russian channel admins. This file, the skills under `.claude/`, and code comments stay in English.
 
 ## Runtime & Package Management
 
