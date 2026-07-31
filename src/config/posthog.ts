@@ -37,11 +37,11 @@ export function initializePostHog(): boolean {
         return false;
     }
 
-    // Refusing to start without a salt is deliberate. The alternative is emitting hashes that can
-    // be brute-forced back to Telegram user ids, which is worse than collecting nothing.
-    if (getTelemetryIdentitySalt() === "") {
-        console.warn("No telemetry identity salt available, product analytics disabled");
-        return false;
+    // Thrown rather than downgraded to a warning, and deliberately outside the try below: the
+    // alternative is emitting hashes that can be brute-forced back to Telegram user ids, so a
+    // misconfigured deployment must not start at all. Mirrors the missing-token throw in bot.ts.
+    if (getTelemetryIdentitySalt() === null) {
+        throw new Error("POSTHOG_ID_SALT is required when POSTHOG_API_KEY is set");
     }
 
     try {
@@ -70,6 +70,15 @@ export function initializePostHog(): boolean {
 
     console.warn("PostHog initialized");
     return true;
+}
+
+/**
+ * Whether anything would consume a captured event. Call sites use this to skip building a payload -
+ * and in particular to skip hashing, which requires a salt that only exists when telemetry is
+ * configured. The test sink counts, otherwise the sink-based tests would observe nothing.
+ */
+export function isTelemetryActive(): boolean {
+    return client !== null || sink !== null;
 }
 
 function scrubProperties(properties: Record<string, string | number | boolean>) {

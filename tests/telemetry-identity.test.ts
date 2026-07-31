@@ -1,4 +1,5 @@
 process.env.TELEGRAM_BOT_TOKEN ??= "123456:TEST_TOKEN";
+process.env.POSTHOG_ID_SALT ??= "a-test-identity-salt";
 
 import { describe, test, expect, afterEach } from "bun:test";
 import { userRef, deploymentRef } from "../src/telemetry/identity";
@@ -56,27 +57,30 @@ describe("Telemetry identity", () => {
         expect(first).not.toBe(second);
     });
 
-    test("falls back to the bot token rather than an empty key", () => {
-        delete process.env.POSTHOG_ID_SALT;
-        process.env.TELEGRAM_BOT_TOKEN = "123456:TEST_TOKEN";
-        const fromToken = userRef(777);
-
-        process.env.POSTHOG_ID_SALT = "an-explicit-salt";
-        const fromSalt = userRef(777);
-
-        expect(getTelemetryIdentitySalt()).toBe("an-explicit-salt");
-        expect(fromToken).not.toBe(fromSalt);
-    });
-
-    test("reports no salt when neither the salt nor the token is set", () => {
-        delete process.env.POSTHOG_ID_SALT;
-        delete process.env.TELEGRAM_BOT_TOKEN;
-
-        expect(getTelemetryIdentitySalt()).toBe("");
-    });
-
-    test("prefers an explicit salt over the bot token", () => {
+    test("trims the configured salt", () => {
         process.env.POSTHOG_ID_SALT = "  explicit  ";
         expect(getTelemetryIdentitySalt()).toBe("explicit");
+    });
+
+    test("reports no salt when POSTHOG_ID_SALT is unset", () => {
+        delete process.env.POSTHOG_ID_SALT;
+
+        expect(getTelemetryIdentitySalt()).toBeNull();
+    });
+
+    // The bot token used to stand in as the salt. It must not: a salt has to be chosen explicitly,
+    // so that rotating the token cannot silently re-bucket every user.
+    test("does not fall back to the bot token", () => {
+        delete process.env.POSTHOG_ID_SALT;
+        process.env.TELEGRAM_BOT_TOKEN = "123456:TEST_TOKEN";
+
+        expect(getTelemetryIdentitySalt()).toBeNull();
+    });
+
+    test("refuses to hash without a salt rather than hashing unsalted", () => {
+        delete process.env.POSTHOG_ID_SALT;
+        process.env.TELEGRAM_BOT_TOKEN = "123456:TEST_TOKEN";
+
+        expect(() => userRef(123)).toThrow("POSTHOG_ID_SALT");
     });
 });

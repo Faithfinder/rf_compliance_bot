@@ -35,18 +35,12 @@ export function getPostHogHost(): string {
 }
 
 /**
- * Secret that keys the HMAC behind every user id sent to PostHog. There is deliberately no
- * unsalted path: the Telegram user id space is small enough to enumerate, so a bare SHA-256
- * digest is reversible by brute force and would be privacy theatre. The bot token is the
- * fallback because it is a per-deployment secret that always exists and never leaves the
- * process - the trade-off being that rotating the token re-buckets every user as new.
+ * Secret that keys the HMAC behind every user id sent to PostHog. Required whenever telemetry is
+ * enabled, and deliberately without a default: the Telegram user id space is small enough to
+ * enumerate, so an unsalted or predictably-salted digest is reversible by brute force and would be
+ * privacy theatre. Returns null when unset so that "absent" is a state a caller cannot overlook.
  */
-export function getTelemetryIdentitySalt(): string {
+export function getTelemetryIdentitySalt(): string | null {
     const salt = process.env.POSTHOG_ID_SALT;
-
-    if (salt && salt.trim() !== "") {
-        return salt.trim();
-    }
-
-    return process.env.TELEGRAM_BOT_TOKEN?.trim() ?? "";
+    return salt && salt.trim() !== "" ? salt.trim() : null;
 }

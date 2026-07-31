@@ -1,4 +1,5 @@
 process.env.TELEGRAM_BOT_TOKEN ??= "123456:TEST_TOKEN";
+process.env.POSTHOG_ID_SALT ??= "a-test-identity-salt";
 
 import { describe, test, expect, afterEach } from "bun:test";
 import { __setTelemetrySink, type TelemetryPayload } from "../src/config/posthog";
@@ -7,7 +8,9 @@ import type { ChannelRequirements } from "../src/utils";
 
 const CHANNEL_ID = "-1009876543210";
 const CHANNEL_TITLE = "Тестовый канал";
-const USER_ID = 7;
+// A realistic Telegram id: a single-digit id would appear in a hex digest by chance, making the
+// "never exposes the raw user id" assertion below meaningless.
+const USER_ID = 987654321;
 
 function collect(): TelemetryPayload[] {
     const payloads: TelemetryPayload[] = [];
@@ -27,6 +30,26 @@ describe("Telemetry capture", () => {
                 contentKind: "single",
             }),
         ).not.toThrow();
+    });
+
+    // The real CI and production-without-telemetry configuration: no client, no sink, and no salt to
+    // hash with. captureEvent has to bail out before it tries to build a distinct id.
+    test("is a silent no-op when there is no salt either", () => {
+        const salt = process.env.POSTHOG_ID_SALT;
+        delete process.env.POSTHOG_ID_SALT;
+
+        try {
+            expect(() =>
+                captureEvent("message_published", USER_ID, {
+                    channelId: CHANNEL_ID,
+                    contentKind: "single",
+                }),
+            ).not.toThrow();
+        } finally {
+            if (salt !== undefined) {
+                process.env.POSTHOG_ID_SALT = salt;
+            }
+        }
     });
 
     test("sends channel id and title in the clear", () => {

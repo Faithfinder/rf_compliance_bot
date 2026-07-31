@@ -50,6 +50,14 @@ is what lets call sites stay unguarded and CI run without any PostHog env vars.
 - The only sanctioned fragment of user input is the command token in
   [src/telemetry/commands.ts](src/telemetry/commands.ts), bounded and with arguments stripped —
   command arguments carry raw Telegram user ids (`/notify_add <id>`).
+- **`POSTHOG_ID_SALT` has no default and no fallback.** With `POSTHOG_API_KEY` set but no salt,
+  `initializePostHog()` throws and the process does not start, the same way `config/bot.ts` throws
+  for a missing `TELEGRAM_BOT_TOKEN`. Do not reintroduce a default: a predictably-salted digest over
+  the small Telegram id space is reversible by brute force. `identity.ts` throws rather than hash
+  without one.
+- `captureEvent` returns early unless `isTelemetryActive()`, because hashing needs a salt that only
+  exists when telemetry is configured. Keep that check first — without it, every capture in a
+  deployment with no PostHog key would try to hash and log a failure.
 - Both teardown paths in [src/index.ts](src/index.ts) must call `closePostHog()`: `gracefulShutdown`
   and the `bot.start().catch()` handler.
 

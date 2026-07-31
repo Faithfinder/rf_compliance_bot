@@ -11,10 +11,16 @@ const REF_LENGTH = 32;
  * namespace stops identifiers of different kinds colliding when they share the same digits.
  */
 function telemetryRef(prefix: string, namespace: string, value: string): string {
-    const digest = createHmac("sha256", getTelemetryIdentitySalt())
-        .update(`${namespace}:${value}`)
-        .digest("hex")
-        .slice(0, REF_LENGTH);
+    const salt = getTelemetryIdentitySalt();
+
+    // Unreachable in practice - initializePostHog refuses to start without a salt, and callers
+    // check isTelemetryActive() first. Guarded anyway so that no future code path can produce an
+    // unsalted, brute-forceable digest.
+    if (salt === null) {
+        throw new Error("Refusing to hash a telemetry identifier without POSTHOG_ID_SALT");
+    }
+
+    const digest = createHmac("sha256", salt).update(`${namespace}:${value}`).digest("hex").slice(0, REF_LENGTH);
 
     return `${prefix}_${digest}`;
 }

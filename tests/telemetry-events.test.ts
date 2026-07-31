@@ -48,6 +48,9 @@ describe("Handler telemetry", () => {
             process.env.TELEGRAM_BOT_TOKEN = "123456:TEST_TOKEN";
         }
 
+        // Required: identifier hashing has no default salt.
+        process.env.POSTHOG_ID_SALT ??= "a-test-identity-salt";
+
         botModule = await import("../src/config/bot");
         posthog = await import("../src/config/posthog");
         database = await import("../src/db/database");

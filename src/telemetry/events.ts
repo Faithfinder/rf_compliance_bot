@@ -1,4 +1,4 @@
-import { emitTelemetry } from "../config/posthog";
+import { emitTelemetry, isTelemetryActive } from "../config/posthog";
 import { deploymentRef, userRef } from "./identity";
 import type { ChannelRequirements } from "../utils";
 
@@ -112,6 +112,13 @@ export function captureEvent<E extends TelemetryEventName>(
     actor: TelemetryActor,
     properties: TelemetryEventProperties[E],
 ): void {
+    // Checked before anything else because hashing the actor needs a salt, which only exists when
+    // telemetry is configured. Without this, every capture in a deployment that has no PostHog key
+    // would build a payload just to discard it, and would log a failed hash while doing so.
+    if (!isTelemetryActive()) {
+        return;
+    }
+
     // Load-bearing try/catch: several call sites sit inside try blocks whose catch branch tells the
     // user that publishing or moderation failed, so a throw here would report a failure for a post
     // that was actually delivered. Others run inside the media group debounce timer, outside

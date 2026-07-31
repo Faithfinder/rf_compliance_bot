@@ -36,13 +36,23 @@ describe("PostHog configuration", () => {
     });
 
     // Emitting hashes that can be brute-forced back to Telegram user ids would be worse than
-    // collecting nothing, so a missing salt disables telemetry rather than degrading it.
+    // collecting nothing, so a missing salt stops the process rather than degrading the hashing.
     test("refuses to start without an identity salt", () => {
         process.env.POSTHOG_API_KEY = "phc_test_key";
         delete process.env.POSTHOG_ID_SALT;
         delete process.env.TELEGRAM_BOT_TOKEN;
 
-        expect(posthog.initializePostHog()).toBe(false);
+        expect(() => posthog.initializePostHog()).toThrow("POSTHOG_ID_SALT");
+    });
+
+    // The bot token used to stand in as the salt. It must not satisfy the requirement any more,
+    // because rotating the token would silently re-bucket every user in the analytics.
+    test("is not satisfied by the bot token standing in for the salt", () => {
+        process.env.POSTHOG_API_KEY = "phc_test_key";
+        delete process.env.POSTHOG_ID_SALT;
+        process.env.TELEGRAM_BOT_TOKEN = "123456:TEST_TOKEN";
+
+        expect(() => posthog.initializePostHog()).toThrow("POSTHOG_ID_SALT");
     });
 
     test("initializes with an API key and a salt", () => {
