@@ -1,10 +1,10 @@
-process.env.TELEGRAM_BOT_TOKEN ??= "123456:TEST_TOKEN";
-
 import { describe, test, expect, beforeAll, afterAll, beforeEach } from "bun:test";
 import type { Update, UserFromGetMe } from "grammy/types";
-import { bot } from "../src/config/bot";
-import { initializeDatabase, closeDatabase, updateChannelSettings, deleteChannelSettings } from "../src/db/database";
-import { registerMessageHandler } from "../src/handlers/message";
+
+// src/config/bot.ts throws at import time without a token, and a static import would be hoisted
+// above any assignment to process.env. The modules are loaded on demand in beforeAll instead.
+let botModule: typeof import("../src/config/bot");
+let database: typeof import("../src/db/database");
 
 const BLURB = "НАСТОЯЩИЙ МАТЕРИАЛ ПРОИЗВЕДЕН ИНОСТРАННЫМ АГЕНТОМ";
 const CHANNEL_ID = -1009876543210;
@@ -50,8 +50,18 @@ function channelPost(text: string): Update {
 }
 
 describe("Channel post moderation", () => {
-    beforeAll(() => {
-        initializeDatabase();
+    beforeAll(async () => {
+        if (!process.env.TELEGRAM_BOT_TOKEN) {
+            process.env.TELEGRAM_BOT_TOKEN = "123456:TEST_TOKEN";
+        }
+
+        botModule = await import("../src/config/bot");
+        database = await import("../src/db/database");
+        const { registerMessageHandler } = await import("../src/handlers/message");
+
+        const bot = botModule.bot;
+
+        database.initializeDatabase();
         bot.botInfo = botInfo;
 
         // Every outbound API call is captured instead of hitting Telegram. grammY copies the
@@ -71,21 +81,21 @@ describe("Channel post moderation", () => {
     });
 
     afterAll(() => {
-        deleteChannelSettings(CHANNEL_ID.toString());
-        closeDatabase();
+        database.deleteChannelSettings(CHANNEL_ID.toString());
+        database.closeDatabase();
     });
 
     beforeEach(() => {
         calls = [];
-        deleteChannelSettings(CHANNEL_ID.toString());
-        updateChannelSettings(CHANNEL_ID.toString(), {
+        database.deleteChannelSettings(CHANNEL_ID.toString());
+        database.updateChannelSettings(CHANNEL_ID.toString(), {
             foreignAgentBlurb: BLURB,
             notificationUserIds: [NOTIFY_USER_ID],
         });
     });
 
     test("deletes a channel post that is missing the blurb", async () => {
-        await bot.handleUpdate(channelPost("Обычный пост без всего"));
+        await botModule.bot.handleUpdate(channelPost("Обычный пост без всего"));
 
         expect(callsTo("deleteMessage")).toHaveLength(1);
         expect(callsTo("deleteMessage")[0]?.payload).toMatchObject({
@@ -95,7 +105,7 @@ describe("Channel post moderation", () => {
     });
 
     test("notifies subscribed admins before deleting, with a copy of the post", async () => {
-        await bot.handleUpdate(channelPost("Обычный пост без всего"));
+        await botModule.bot.handleUpdate(channelPost("Обычный пост без всего"));
 
         const notifications = callsTo("sendMessage");
         expect(notifications).toHaveLength(1);
@@ -116,15 +126,15 @@ describe("Channel post moderation", () => {
     });
 
     test("leaves a compliant channel post alone", async () => {
-        await bot.handleUpdate(channelPost(`Текст поста.\n\n${BLURB}`));
+        await botModule.bot.handleUpdate(channelPost(`Текст поста.\n\n${BLURB}`));
 
         expect(calls).toHaveLength(0);
     });
 
     test("skips moderation when no blurb is configured for the channel", async () => {
-        deleteChannelSettings(CHANNEL_ID.toString());
+        database.deleteChannelSettings(CHANNEL_ID.toString());
 
-        await bot.handleUpdate(channelPost("Обычный пост без всего"));
+        await botModule.bot.handleUpdate(channelPost("Обычный пост без всего"));
 
         expect(calls).toHaveLength(0);
     });
