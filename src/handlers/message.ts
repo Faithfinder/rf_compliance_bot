@@ -21,6 +21,7 @@ import {
     reportChannelPostError,
     reportModerationError,
 } from "./message-helpers";
+import { captureEvent, classifyPublishFailure } from "../telemetry/events";
 
 export function registerMessageHandler(): void {
     bot.chatType("private").on("message", async (ctx) => {
@@ -33,12 +34,19 @@ export function registerMessageHandler(): void {
         const channelConfig = ctx.session.channelConfig;
 
         if (!channelConfig) {
+            captureEvent("publish_blocked", userId, { reason: "no_channel" });
             return ctx.reply(formatNoChannelMessage());
         }
 
         const permissions = await checkUserChannelPermissions(channelConfig.channelId, userId);
 
         if (!permissions?.canEditMessages) {
+            captureEvent("publish_blocked", userId, {
+                reason: "no_permission",
+                channelId: channelConfig.channelId,
+                channelTitle: channelConfig.channelTitle,
+            });
+
             return ctx.reply(
                 "❌ У вас нет разрешения на публикацию сообщений в этот канал.\n\n" +
                     'Только администраторы канала с разрешением "Редактировать сообщения" могут публиковать сообщения через этого бота.\n\n' +
@@ -50,6 +58,12 @@ export function registerMessageHandler(): void {
         const foreignAgentBlurb = channelSettings?.foreignAgentBlurb;
 
         if (!foreignAgentBlurb) {
+            captureEvent("publish_blocked", userId, {
+                reason: "no_blurb",
+                channelId: channelConfig.channelId,
+                channelTitle: channelConfig.channelTitle,
+            });
+
             const requirements = await checkChannelRequirements(channelConfig.channelId);
 
             let errorMessage = fmt`❌ Невозможно опубликовать сообщение: Блурб иностранного агента не настроен для ${formatChannelInfo(channelConfig.channelId, channelConfig.channelTitle)}\n\n📋 Требования:\n${formatChannelRequirements(requirements)}\n\n`;
@@ -85,6 +99,13 @@ export function registerMessageHandler(): void {
                                 successMessage.text,
                                 entities.length ? { entities } : undefined,
                             );
+
+                            captureEvent("message_published", userId, {
+                                channelId: channelConfig.channelId,
+                                channelTitle: channelConfig.channelTitle,
+                                contentKind: "album",
+                                albumSize: messages.length,
+                            });
                         } catch (error) {
                             reportChannelPostError(error, {
                                 userId,
@@ -94,6 +115,14 @@ export function registerMessageHandler(): void {
                             });
 
                             const requirements = await checkChannelRequirements(channelConfig.channelId);
+
+                            captureEvent("publish_failed", userId, {
+                                channelId: channelConfig.channelId,
+                                channelTitle: channelConfig.channelTitle,
+                                contentKind: "album",
+                                failureReason: classifyPublishFailure(requirements),
+                            });
+
                             let errorMessage = fmt`❌ Не удалось опубликовать альбом в ${formatChannelInfo(channelConfig.channelId, channelConfig.channelTitle)}\n\n📋 Требования:\n${formatChannelRequirements(requirements)}\n\n`;
 
                             if (!requirements.channelExists) {
@@ -119,7 +148,7 @@ export function registerMessageHandler(): void {
                             return;
                         }
 
-                        await handleRejectionWithNotifications({
+                        const notifications = await handleRejectionWithNotifications({
                             channelId: channelConfig.channelId,
                             channelTitle: channelConfig.channelTitle,
                             rejectedMessageChatId: ctx.chat.id,
@@ -130,6 +159,15 @@ export function registerMessageHandler(): void {
                                 username: ctx.from.username,
                             },
                             excludeUserIds: [userId],
+                        });
+
+                        captureEvent("message_rejected", userId, {
+                            channelId: channelConfig.channelId,
+                            channelTitle: channelConfig.channelTitle,
+                            contentKind: "album",
+                            albumSize: messages.length,
+                            notifiedTargets: notifications.totalTargets,
+                            notificationFailures: notifications.failedTargets,
                         });
 
                         const errorMessage = fmt`❌ Невозможно опубликовать альбом: Ваше сообщение должно содержать текст иностранного агента.\n\n🌍 ${fmt`${b}Необходимый текст:${b}`}\n${foreignAgentBlurb}\n\nПожалуйста, добавьте этот текст к вашему сообщению и повторите попытку.\nОригинальное сообщение:`;
@@ -158,7 +196,7 @@ export function registerMessageHandler(): void {
         }
 
         if (!validateMessageCompliance(ctx.message, foreignAgentBlurb)) {
-            await handleRejectionWithNotifications({
+            const notifications = await handleRejectionWithNotifications({
                 channelId: channelConfig.channelId,
                 channelTitle: channelConfig.channelTitle,
                 rejectedMessageChatId: ctx.chat.id,
@@ -171,6 +209,14 @@ export function registerMessageHandler(): void {
                 excludeUserIds: [userId],
             });
 
+            captureEvent("message_rejected", userId, {
+                channelId: channelConfig.channelId,
+                channelTitle: channelConfig.channelTitle,
+                contentKind: "single",
+                notifiedTargets: notifications.totalTargets,
+                notificationFailures: notifications.failedTargets,
+            });
+
             const errorMessage = fmt`❌ Невозможно опубликовать сообщение: Ваше сообщение должно содержать текст иностранного агента.\n\n🌍 ${fmt`${b}Необходимый текст:${b}`}\n${foreignAgentBlurb}\n\nПожалуйста, добавьте этот текст к вашему сообщению и повторите попытку.\nОригинальное сообщение:`;
 
             const entities = errorMessage.entities;
@@ -181,6 +227,14 @@ export function registerMessageHandler(): void {
 
         try {
             await ctx.api.copyMessage(channelConfig.channelId, ctx.chat.id, ctx.message.message_id);
+
+            // captureEvent never throws, which is what makes it safe here: this sits inside the try
+            // whose catch below tells the user that publishing failed.
+            captureEvent("message_published", userId, {
+                channelId: channelConfig.channelId,
+                channelTitle: channelConfig.channelTitle,
+                contentKind: "single",
+            });
 
             const successMessage = fmt`✅ Сообщение опубликовано в ${formatChannelInfo(
                 channelConfig.channelId,
@@ -196,6 +250,13 @@ export function registerMessageHandler(): void {
             });
 
             const requirements = await checkChannelRequirements(channelConfig.channelId);
+
+            captureEvent("publish_failed", userId, {
+                channelId: channelConfig.channelId,
+                channelTitle: channelConfig.channelTitle,
+                contentKind: "single",
+                failureReason: classifyPublishFailure(requirements),
+            });
 
             let errorMessage = fmt`❌ Не удалось опубликовать сообщение в ${formatChannelInfo(channelConfig.channelId, channelConfig.channelTitle)}\n\n📋 Требования:\n${formatChannelRequirements(requirements)}\n\n`;
 
@@ -293,6 +354,16 @@ export function registerMessageHandler(): void {
                     try {
                         const messageIds = messages.map((m) => m.message_id).sort((a, b) => a - b);
                         await ctx.api.deleteMessages(message.chat.id, messageIds);
+
+                        captureEvent("channel_post_moderated", actor?.id ?? null, {
+                            channelId,
+                            channelTitle,
+                            contentKind: "album",
+                            albumSize: messages.length,
+                            notifiedTargets: notifications.totalTargets,
+                            notificationFailures: notifications.failedTargets,
+                            authorKnown: typeof actor?.id === "number",
+                        });
                     } catch (error) {
                         reportModerationError(error, {
                             channelId,
@@ -300,6 +371,13 @@ export function registerMessageHandler(): void {
                             messageCount: messages.length,
                             notificationTargets: notifications.totalTargets,
                             notificationFailures: notifications.failedTargets,
+                        });
+
+                        captureEvent("moderation_failed", actor?.id ?? null, {
+                            channelId,
+                            channelTitle,
+                            contentKind: "album",
+                            albumSize: messages.length,
                         });
                     }
                 },
@@ -326,12 +404,27 @@ export function registerMessageHandler(): void {
 
         try {
             await ctx.api.deleteMessage(message.chat.id, message.message_id);
+
+            captureEvent("channel_post_moderated", actor?.id ?? null, {
+                channelId,
+                channelTitle,
+                contentKind: "single",
+                notifiedTargets: notifications.totalTargets,
+                notificationFailures: notifications.failedTargets,
+                authorKnown: typeof actor?.id === "number",
+            });
         } catch (error) {
             reportModerationError(error, {
                 channelId,
                 messageId: message.message_id,
                 notificationTargets: notifications.totalTargets,
                 notificationFailures: notifications.failedTargets,
+            });
+
+            captureEvent("moderation_failed", actor?.id ?? null, {
+                channelId,
+                channelTitle,
+                contentKind: "single",
             });
 
             return;

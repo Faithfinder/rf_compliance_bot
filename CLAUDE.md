@@ -29,6 +29,38 @@ Centralized in [src/handlers/message-helpers.ts](src/handlers/message-helpers.ts
 - Compliant rich messages are published with `copyMessage`, which keeps their formatting intact.
 - `resolveUserIdentifier()` only accepts numeric user IDs - username lookups are not supported by the Telegram Bot API.
 
+## Telemetry
+
+PostHog product analytics, alongside Sentry. [src/config/posthog.ts](src/config/posthog.ts) mirrors
+`config/sentry.ts`: a missing `POSTHOG_API_KEY` disables it and every capture becomes a no-op, which
+is what lets call sites stay unguarded and CI run without any PostHog env vars.
+
+- **Events are declared only in `TelemetryEventProperties`** in [src/telemetry/events.ts](src/telemetry/events.ts).
+  Adding one anywhere else will not typecheck. `captureEvent(event, actor, properties)` is the only
+  call path. See the `add-telemetry-event` skill.
+- **`captureEvent` never throws and is never awaited.** This is load-bearing: several call sites sit
+  inside `try` blocks whose `catch` tells the user that publishing failed, so a throw would report a
+  failure for a post that was actually delivered. Others run inside the media-group debounce timer,
+  outside grammY's error handling, where a throw kills the process.
+- **Privacy is asymmetric, deliberately.** Channel ids and titles are sent in plaintext — a moderated
+  channel is public information. Anything identifying a *person* is not: user ids go through
+  [src/telemetry/identity.ts](src/telemetry/identity.ts) as a salted HMAC and nothing else, and
+  usernames, display names, author signatures, message text and the blurb text are never sent. Call
+  sites pass **raw** ids; identity.ts is the only place that hashes, so redaction has one audit point.
+- The only sanctioned fragment of user input is the command token in
+  [src/telemetry/commands.ts](src/telemetry/commands.ts), bounded and with arguments stripped —
+  command arguments carry raw Telegram user ids (`/notify_add <id>`).
+- **`POSTHOG_ID_SALT` has no default and no fallback.** With `POSTHOG_API_KEY` set but no salt,
+  `initializePostHog()` throws and the process does not start, the same way `config/bot.ts` throws
+  for a missing `TELEGRAM_BOT_TOKEN`. Do not reintroduce a default: a predictably-salted digest over
+  the small Telegram id space is reversible by brute force. `identity.ts` throws rather than hash
+  without one.
+- `captureEvent` returns early unless `isTelemetryActive()`, because hashing needs a salt that only
+  exists when telemetry is configured. Keep that check first — without it, every capture in a
+  deployment with no PostHog key would try to hash and log a failure.
+- Both teardown paths in [src/index.ts](src/index.ts) must call `closePostHog()`: `gracefulShutdown`
+  and the `bot.start().catch()` handler.
+
 ## Code Style
 
 - **Comments**:

@@ -2,6 +2,7 @@ import { b, fmt, i } from "@grammyjs/parse-mode";
 import { bot } from "../config/bot";
 import { getChannelSettings, updateChannelSettings } from "../db/database";
 import { checkUserChannelPermissions, formatChannelInfo, formatNoChannelMessage } from "../utils";
+import { captureEvent } from "../telemetry/events";
 
 export function registerSettingsCommand(): void {
     bot.command("set_fa_blurb", async (ctx) => {
@@ -52,7 +53,17 @@ export function registerSettingsCommand(): void {
             return ctx.reply("❌ Текст иностранного агента не может быть пустым. Пожалуйста, укажите текст.");
         }
 
+        const previousBlurb = getChannelSettings(channelConfig.channelId)?.foreignAgentBlurb;
+
         updateChannelSettings(channelConfig.channelId, { foreignAgentBlurb: newBlurb });
+
+        // The length only - the blurb itself names the agent and never leaves the process.
+        captureEvent("blurb_configured", userId, {
+            channelId: channelConfig.channelId,
+            channelTitle: channelConfig.channelTitle,
+            blurbLength: newBlurb.length,
+            isUpdate: previousBlurb !== undefined,
+        });
 
         let confirmMessage = fmt`✅ Текст иностранного агента успешно обновлен!\n\n📢 ${fmt`${b}Канал:${b}`} ${formatChannelInfo(channelConfig.channelId, channelConfig.channelTitle)}\n\n🌍 ${fmt`${b}Новый текст иностранного агента:${b}`}\n`;
         confirmMessage = fmt`${confirmMessage}${newBlurb}`;

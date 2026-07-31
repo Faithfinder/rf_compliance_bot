@@ -9,6 +9,8 @@ import {
     formatChannelRequirements,
     allRequirementsPassed,
 } from "../utils";
+import { identifyChannel } from "../config/posthog";
+import { captureEvent, type ChannelSource } from "../telemetry/events";
 
 export function showChannelSelectionUI(errorMessage?: string): { text: string; keyboard: Keyboard } {
     const keyboard = new Keyboard()
@@ -35,7 +37,11 @@ export function showChannelSelectionUI(errorMessage?: string): { text: string; k
     return { text, keyboard };
 }
 
-async function processChannelSelection(ctx: SessionContext, channelIdentifier: string): Promise<void> {
+async function processChannelSelection(
+    ctx: SessionContext,
+    channelIdentifier: string,
+    source: ChannelSource,
+): Promise<void> {
     const chatId = ctx.chat!.id;
 
     const workingMsg = await ctx.reply("Поиск канала...");
@@ -61,6 +67,15 @@ async function processChannelSelection(ctx: SessionContext, channelIdentifier: s
     const requirements = await checkChannelRequirements(channelInfo.id);
 
     await bot.api.deleteMessage(chatId, workingMsg.message_id).catch(() => {});
+
+    identifyChannel(channelInfo.id, channelInfo.title);
+
+    captureEvent("channel_configured", ctx.from?.id ?? null, {
+        channelId: channelInfo.id,
+        channelTitle: channelInfo.title,
+        source,
+        requirementsSatisfied: allRequirementsPassed(requirements),
+    });
 
     const sections: Array<string | FormattedString> = [
         "✅ Канал настроен!",
@@ -126,7 +141,7 @@ export function registerChannelCommands(): void {
         }
 
         const channelIdentifier = args.trim();
-        return processChannelSelection(ctx, channelIdentifier);
+        return processChannelSelection(ctx, channelIdentifier, "command");
     });
 
     bot.command("removechannel", async (ctx) => {
@@ -136,11 +151,18 @@ export function registerChannelCommands(): void {
             return ctx.reply("Не удается идентифицировать пользователя.");
         }
 
-        if (!ctx.session.channelConfig) {
+        const channelConfig = ctx.session.channelConfig;
+
+        if (!channelConfig) {
             return ctx.reply("У вас не настроен канал.");
         }
 
         delete ctx.session.channelConfig;
+
+        captureEvent("channel_removed", userId, {
+            channelId: channelConfig.channelId,
+            channelTitle: channelConfig.channelTitle,
+        });
 
         return ctx.reply(
             "✅ Конфигурация канала успешно удалена.\n\nВаши сообщения больше не будут публиковаться ни в какой канал.",
@@ -166,6 +188,6 @@ export function registerChannelCommands(): void {
         }
 
         const channelId = chatShared.chat_id.toString();
-        return processChannelSelection(ctx, channelId);
+        return processChannelSelection(ctx, channelId, "chat_shared");
     });
 }

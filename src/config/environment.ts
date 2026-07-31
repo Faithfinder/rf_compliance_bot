@@ -23,3 +23,24 @@ export function getBotOwnerId(): number | null {
 
     return parsedId;
 }
+
+export function getPostHogApiKey(): string | null {
+    const apiKey = process.env.POSTHOG_API_KEY;
+    return apiKey && apiKey.trim() !== "" ? apiKey.trim() : null;
+}
+
+export function getPostHogHost(): string {
+    const host = process.env.POSTHOG_HOST;
+    return host && host.trim() !== "" ? host.trim() : "https://eu.i.posthog.com";
+}
+
+/**
+ * Secret that keys the HMAC behind every user id sent to PostHog. Required whenever telemetry is
+ * enabled, and deliberately without a default: the Telegram user id space is small enough to
+ * enumerate, so an unsalted or predictably-salted digest is reversible by brute force and would be
+ * privacy theatre. Returns null when unset so that "absent" is a state a caller cannot overlook.
+ */
+export function getTelemetryIdentitySalt(): string | null {
+    const salt = process.env.POSTHOG_ID_SALT;
+    return salt && salt.trim() !== "" ? salt.trim() : null;
+}

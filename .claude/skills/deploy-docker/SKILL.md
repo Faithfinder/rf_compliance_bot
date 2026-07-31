@@ -25,4 +25,6 @@ services:
 
 The database file `channels.db` will be stored in the mounted volume.
 
+Both Sentry and PostHog stay disabled unless their variables are passed in: error tracking needs `SENTRY_DSN`, product analytics needs `POSTHOG_API_KEY`. Neither is required to run the bot.
+
 See [.env.example](../../../.env.example) for the full set of environment variables.

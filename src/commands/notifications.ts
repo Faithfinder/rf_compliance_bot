@@ -9,6 +9,7 @@ import {
     formatNoChannelMessage,
     resolveUserIdentifier,
 } from "../utils";
+import { captureEvent } from "../telemetry/events";
 
 interface ValidationResult {
     success: boolean;
@@ -82,6 +83,14 @@ async function processUserOperation(
     if (operation === "add") {
         addNotificationUser(channelId, targetUserId);
 
+        // The resulting count, never targetUserId - a recipient is a person, so the same rule
+        // applies to them as to the acting user.
+        captureEvent("notification_recipient_added", ctx.from?.id ?? null, {
+            channelId,
+            channelTitle,
+            recipientCount: getNotificationUsers(channelId).length,
+        });
+
         const message = FormattedString.join(
             [
                 "✅ Администратор успешно добавлен в список уведомлений!",
@@ -95,6 +104,12 @@ async function processUserOperation(
         return ctx.reply(message.text, entities.length ? { entities } : undefined);
     } else {
         removeNotificationUser(channelId, targetUserId);
+
+        captureEvent("notification_recipient_removed", ctx.from?.id ?? null, {
+            channelId,
+            channelTitle,
+            recipientCount: getNotificationUsers(channelId).length,
+        });
 
         const message = FormattedString.join(
             [

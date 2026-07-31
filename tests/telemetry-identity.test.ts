@@ -1,0 +1,86 @@
+process.env.TELEGRAM_BOT_TOKEN ??= "123456:TEST_TOKEN";
+process.env.POSTHOG_ID_SALT ??= "a-test-identity-salt";
+
+import { describe, test, expect, afterEach } from "bun:test";
+import { userRef, deploymentRef } from "../src/telemetry/identity";
+import { getTelemetryIdentitySalt } from "../src/config/environment";
+
+const originalSalt = process.env.POSTHOG_ID_SALT;
+const originalToken = process.env.TELEGRAM_BOT_TOKEN;
+
+function restoreEnvironment(): void {
+    if (originalSalt === undefined) {
+        delete process.env.POSTHOG_ID_SALT;
+    } else {
+        process.env.POSTHOG_ID_SALT = originalSalt;
+    }
+
+    if (originalToken === undefined) {
+        delete process.env.TELEGRAM_BOT_TOKEN;
+    } else {
+        process.env.TELEGRAM_BOT_TOKEN = originalToken;
+    }
+}
+
+describe("Telemetry identity", () => {
+    afterEach(restoreEnvironment);
+
+    test("produces a stable prefixed reference for the same user", () => {
+        expect(userRef(123)).toBe(userRef(123));
+        expect(userRef(123)).toStartWith("u_");
+    });
+
+    test("never exposes the raw user id", () => {
+        expect(userRef(123)).not.toContain("123");
+        expect(userRef(987654321)).not.toContain("987654321");
+    });
+
+    test("gives different users different references", () => {
+        expect(userRef(123)).not.toBe(userRef(124));
+    });
+
+    test("deployment reference is stable and distinctly prefixed", () => {
+        expect(deploymentRef()).toBe(deploymentRef());
+        expect(deploymentRef()).toStartWith("d_");
+        expect(deploymentRef()).not.toBe(userRef(1));
+    });
+
+    // The salt is read per call rather than cached. A memoized salt would silently keep using a
+    // stale key here, so this is the regression test for that hazard.
+    test("changing the salt changes the reference", () => {
+        process.env.POSTHOG_ID_SALT = "salt-one";
+        const first = userRef(555);
+
+        process.env.POSTHOG_ID_SALT = "salt-two";
+        const second = userRef(555);
+
+        expect(first).not.toBe(second);
+    });
+
+    test("trims the configured salt", () => {
+        process.env.POSTHOG_ID_SALT = "  explicit  ";
+        expect(getTelemetryIdentitySalt()).toBe("explicit");
+    });
+
+    test("reports no salt when POSTHOG_ID_SALT is unset", () => {
+        delete process.env.POSTHOG_ID_SALT;
+
+        expect(getTelemetryIdentitySalt()).toBeNull();
+    });
+
+    // The bot token used to stand in as the salt. It must not: a salt has to be chosen explicitly,
+    // so that rotating the token cannot silently re-bucket every user.
+    test("does not fall back to the bot token", () => {
+        delete process.env.POSTHOG_ID_SALT;
+        process.env.TELEGRAM_BOT_TOKEN = "123456:TEST_TOKEN";
+
+        expect(getTelemetryIdentitySalt()).toBeNull();
+    });
+
+    test("refuses to hash without a salt rather than hashing unsalted", () => {
+        delete process.env.POSTHOG_ID_SALT;
+        process.env.TELEGRAM_BOT_TOKEN = "123456:TEST_TOKEN";
+
+        expect(() => userRef(123)).toThrow("POSTHOG_ID_SALT");
+    });
+});
