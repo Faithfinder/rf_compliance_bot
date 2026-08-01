@@ -190,23 +190,42 @@ export function registerNotificationCommands(): void {
         } else {
             message = fmt`${message}👥 ${fmt`${b}Подписчики на уведомления:${b}`}\n`;
 
+            let unreachableCount = 0;
+
             for (const targetUserId of notificationUserIds) {
+                // Recipients added before the bot started warning about this may have been silently
+                // receiving nothing for months, so the list is the one place that has to say so.
+                const reachable = await isRecipientReachable(targetUserId);
+                if (!reachable) {
+                    unreachableCount += 1;
+                }
+
+                let userLine: FormattedString;
+
                 try {
                     const chatMember = await bot.api.getChatMember(validation.channelId, targetUserId);
                     const user = chatMember.user;
-                    let userLine = fmt`• ${user.first_name}`;
+                    userLine = fmt`• ${user.first_name}`;
                     if (user.username) {
                         userLine = fmt`${userLine} (@${user.username})`;
                     }
                     userLine = fmt`${userLine} ${fmt`${code}${String(targetUserId)}${code}`}`;
-                    message = fmt`${message}${userLine}\n`;
                 } catch {
-                    const fallbackLine = fmt`• ID: ${fmt`${code}${String(targetUserId)}${code}`} (недоступен)`;
-                    message = fmt`${message}${fallbackLine}\n`;
+                    userLine = fmt`• ID: ${fmt`${code}${String(targetUserId)}${code}`} (недоступен)`;
                 }
+
+                if (!reachable) {
+                    userLine = fmt`${userLine} ⚠️`;
+                }
+
+                message = fmt`${message}${userLine}\n`;
             }
 
             message = fmt`${message}\n${fmt`${b}Всего:${b}`} ${notificationUserIds.length}`;
+
+            if (unreachableCount > 0) {
+                message = fmt`${message}\n\n⚠️ Бот не может писать администраторам с этой отметкой (${unreachableCount}) — они не начали диалог с ботом или заблокировали его, и уведомления до них не доходят. Попросите их открыть чат с ботом и нажать «Старт».`;
+            }
         }
 
         const entities = message.entities;

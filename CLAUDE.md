@@ -42,6 +42,9 @@ cannot be written to. Telegram answers `400: chat not found` (or a 403 for block
 - Because that signal is now silent, `/notify_add` probes reachability with `sendChatAction` (the
   cheapest call that fails the same way and shows the recipient nothing but a typing indicator) and
   warns the admin at configuration time, which is the only moment anyone can act on it.
+- `/notify_list` probes every recipient for the same reason: an add-time warning does nothing for
+  entries that predate it. Its `⚠️` marker means "the bot cannot write to this person" and is
+  distinct from the older `(недоступен)`, which only means `getChatMember` failed for them.
 
 ## Telemetry
 
