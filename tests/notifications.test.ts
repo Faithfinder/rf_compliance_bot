@@ -1,6 +1,8 @@
 import { describe, test, expect, beforeAll } from "bun:test";
+import { GrammyError } from "grammy";
 
 let rejectionModule: typeof import("../src/notifications/rejection");
+let reachabilityModule: typeof import("../src/notifications/reachability");
 let botModule: typeof import("../src/config/bot");
 
 beforeAll(async () => {
@@ -9,8 +11,18 @@ beforeAll(async () => {
     }
 
     rejectionModule = await import("../src/notifications/rejection");
+    reachabilityModule = await import("../src/notifications/reachability");
     botModule = await import("../src/config/bot");
 });
+
+function apiError(errorCode: number, description: string, method = "sendMessage"): GrammyError {
+    return new GrammyError(
+        `Call to '${method}' failed!`,
+        { ok: false, error_code: errorCode, description },
+        method,
+        {},
+    );
+}
 
 describe("Rejection notifications", () => {
     test("buildRejectionNotificationMessage includes actor details when provided", () => {
@@ -88,6 +100,7 @@ describe("Rejection notifications", () => {
             expect(result.totalTargets).toBe(3);
             expect(result.successfulTargets).toBe(3);
             expect(result.failedTargets).toBe(0);
+            expect(result.unreachableTargets).toBe(0);
 
             // Author plus two distinct notify users should be contacted
             expect(sendCalls.map((call) => call.userId).sort()).toEqual([1, 2, 3]);
@@ -97,6 +110,114 @@ describe("Rejection notifications", () => {
             // Restore original implementations
             botModule.bot.api.sendMessage = originalSend;
             botModule.bot.api.copyMessage = originalCopy;
+        }
+    });
+
+    test("dispatchRejectionNotifications counts recipients without a private chat as unreachable", async () => {
+        const originalSend = botModule.bot.api.sendMessage;
+        const originalCopy = botModule.bot.api.copyMessage;
+
+        botModule.bot.api.sendMessage = ((userId: number) => {
+            if (userId === 1) {
+                return Promise.reject(apiError(400, "Bad Request: chat not found"));
+            }
+
+            if (userId === 2) {
+                return Promise.reject(apiError(403, "Forbidden: bot was blocked by the user"));
+            }
+
+            return Promise.resolve({ message_id: 99 } as unknown);
+        }) as typeof botModule.bot.api.sendMessage;
+
+        botModule.bot.api.copyMessage = (() =>
+            Promise.resolve({ message_id: 100 } as unknown)) as typeof botModule.bot.api.copyMessage;
+
+        try {
+            const result = await rejectionModule.dispatchRejectionNotifications({
+                channelId: "-100123",
+                rejectedMessageChatId: -100123,
+                rejectedMessageId: 77,
+                actor: { id: 1, displayName: "Author" },
+                includeAuthor: true,
+                notificationUserIds: [2, 3],
+            });
+
+            expect(result.totalTargets).toBe(3);
+            expect(result.successfulTargets).toBe(1);
+            expect(result.unreachableTargets).toBe(2);
+            expect(result.failedTargets).toBe(0);
+        } finally {
+            botModule.bot.api.sendMessage = originalSend;
+            botModule.bot.api.copyMessage = originalCopy;
+        }
+    });
+
+    test("dispatchRejectionNotifications still counts genuine delivery errors as failures", async () => {
+        const originalSend = botModule.bot.api.sendMessage;
+
+        botModule.bot.api.sendMessage = (() =>
+            Promise.reject(
+                apiError(400, "Bad Request: message text is empty"),
+            )) as typeof botModule.bot.api.sendMessage;
+
+        try {
+            const result = await rejectionModule.dispatchRejectionNotifications({
+                channelId: "-100123",
+                rejectedMessageChatId: -100123,
+                rejectedMessageId: 77,
+                notificationUserIds: [5],
+            });
+
+            expect(result.failedTargets).toBe(1);
+            expect(result.unreachableTargets).toBe(0);
+        } finally {
+            botModule.bot.api.sendMessage = originalSend;
+        }
+    });
+});
+
+describe("Recipient reachability", () => {
+    test("isUnreachableRecipientError recognizes every wording for a missing private chat", () => {
+        expect(reachabilityModule.isUnreachableRecipientError(apiError(400, "Bad Request: chat not found"))).toBe(true);
+        expect(
+            reachabilityModule.isUnreachableRecipientError(
+                apiError(403, "Forbidden: bot can't initiate conversation with a user"),
+            ),
+        ).toBe(true);
+        expect(reachabilityModule.isUnreachableRecipientError(apiError(403, "Forbidden: user is deactivated"))).toBe(
+            true,
+        );
+    });
+
+    test("isUnreachableRecipientError leaves real faults alone", () => {
+        expect(
+            reachabilityModule.isUnreachableRecipientError(apiError(400, "Bad Request: message text is empty")),
+        ).toBe(false);
+        expect(reachabilityModule.isUnreachableRecipientError(apiError(429, "Too Many Requests"))).toBe(false);
+        expect(reachabilityModule.isUnreachableRecipientError(new Error("chat not found"))).toBe(false);
+    });
+
+    test("isRecipientReachable reports only reachability failures, not transient ones", async () => {
+        const originalSendChatAction = botModule.bot.api.sendChatAction;
+
+        botModule.bot.api.sendChatAction = ((userId: number) => {
+            if (userId === 1) {
+                return Promise.reject(apiError(400, "Bad Request: chat not found", "sendChatAction"));
+            }
+
+            if (userId === 2) {
+                return Promise.reject(new Error("network down"));
+            }
+
+            return Promise.resolve(true);
+        }) as typeof botModule.bot.api.sendChatAction;
+
+        try {
+            expect(await reachabilityModule.isRecipientReachable(1)).toBe(false);
+            expect(await reachabilityModule.isRecipientReachable(2)).toBe(true);
+            expect(await reachabilityModule.isRecipientReachable(3)).toBe(true);
+        } finally {
+            botModule.bot.api.sendChatAction = originalSendChatAction;
         }
     });
 });

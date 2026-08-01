@@ -3,6 +3,7 @@ import { Keyboard } from "grammy";
 import { bot } from "../config/bot";
 import type { SessionContext } from "../config/session";
 import { addNotificationUser, removeNotificationUser, getNotificationUsers } from "../db/database";
+import { isRecipientReachable } from "../notifications/reachability";
 import {
     checkUserChannelPermissions,
     formatChannelInfo,
@@ -91,15 +92,23 @@ async function processUserOperation(
             recipientCount: getNotificationUsers(channelId).length,
         });
 
-        const message = FormattedString.join(
-            [
-                "✅ Администратор успешно добавлен в список уведомлений!",
-                fmt`📢 ${fmt`${b}Канал:${b}`} ${formatChannelInfo(channelId, channelTitle)}`,
-                fmt`🆔 ${fmt`${b}ID пользователя:${b}`} ${fmt`${code}${String(targetUserId)}${code}`}`,
-                "Администратор будет получать уведомления, когда сообщения отклоняются из-за отсутствия текста иностранного агента.",
-            ],
-            "\n\n",
-        );
+        const lines: (string | FormattedString)[] = [
+            "✅ Администратор успешно добавлен в список уведомлений!",
+            fmt`📢 ${fmt`${b}Канал:${b}`} ${formatChannelInfo(channelId, channelTitle)}`,
+            fmt`🆔 ${fmt`${b}ID пользователя:${b}`} ${fmt`${code}${String(targetUserId)}${code}`}`,
+            "Администратор будет получать уведомления, когда сообщения отклоняются из-за отсутствия текста иностранного агента.",
+        ];
+
+        // Telegram never lets a bot write first, so a recipient who has not opened a chat with the
+        // bot silently receives nothing at all. Say it now, while the admin can still act on it -
+        // at rejection time there is nobody left to tell.
+        if (!(await isRecipientReachable(targetUserId))) {
+            lines.push(
+                "⚠️ Но пока бот не может ему писать: он еще не начал диалог с ботом. Попросите его открыть чат с ботом и нажать «Старт», иначе уведомления не будут доходить.",
+            );
+        }
+
+        const message = FormattedString.join(lines, "\n\n");
         const entities = message.entities;
         return ctx.reply(message.text, entities.length ? { entities } : undefined);
     } else {

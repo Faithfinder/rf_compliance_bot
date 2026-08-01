@@ -103,6 +103,7 @@ describe("Handler telemetry", () => {
             content_kind: "single",
             notified_targets: 1,
             notification_failures: 0,
+            unreachable_targets: 0,
             author_known: false,
         });
         expect(moderated?.groups).toEqual({ channel: String(CHANNEL_ID) });

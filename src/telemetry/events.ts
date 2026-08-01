@@ -64,6 +64,8 @@ export interface TelemetryEventProperties {
         albumSize?: number;
         notifiedTargets: number;
         notificationFailures: number;
+        /** Recipients with no private chat with the bot - a setup gap, not a delivery fault. */
+        unreachableTargets: number;
     };
     publish_failed: ChannelScoped & {
         contentKind: ContentKind;
@@ -74,6 +76,8 @@ export interface TelemetryEventProperties {
         albumSize?: number;
         notifiedTargets: number;
         notificationFailures: number;
+        /** Recipients with no private chat with the bot - a setup gap, not a delivery fault. */
+        unreachableTargets: number;
         authorKnown: boolean;
     };
     moderation_failed: ChannelScoped & {

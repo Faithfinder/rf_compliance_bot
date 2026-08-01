@@ -3,6 +3,7 @@ import { FormattedString, b, code, fmt } from "@grammyjs/parse-mode";
 import { bot } from "../config/bot";
 import { getNotificationUsers } from "../db/database";
 import { formatChannelInfo } from "../utils";
+import { describeDeliveryError, isUnreachableRecipientError } from "./reachability";
 
 export const FOREIGN_AGENT_REJECTION_REASON = "Отсутствует текст иностранного агента";
 
@@ -62,7 +63,10 @@ export function buildRejectionNotificationMessage(params: RejectionNotificationP
 export interface RejectionNotificationResult {
     totalTargets: number;
     successfulTargets: number;
+    /** Recipients lost to an actual fault. Kept apart from the unreachable ones on purpose. */
     failedTargets: number;
+    /** Recipients with no private chat with the bot, which is expected rather than an error. */
+    unreachableTargets: number;
 }
 
 export async function dispatchRejectionNotifications(
@@ -101,11 +105,13 @@ export async function dispatchRejectionNotifications(
             totalTargets: 0,
             successfulTargets: 0,
             failedTargets: 0,
+            unreachableTargets: 0,
         };
     }
 
     let successfulTargets = 0;
     let failedTargets = 0;
+    let unreachableTargets = 0;
 
     for (const target of targets) {
         try {
@@ -117,6 +123,17 @@ export async function dispatchRejectionNotifications(
             await bot.api.copyMessage(target.userId, params.rejectedMessageChatId, params.rejectedMessageId);
             successfulTargets += 1;
         } catch (error) {
+            // A recipient who never opened a private chat with the bot cannot be written to, and
+            // the author of a channel post usually is one: posting needs no contact with the bot.
+            // Reporting that to Sentry buries real delivery faults under an unfixable condition.
+            if (isUnreachableRecipientError(error)) {
+                console.warn(
+                    `Skipped rejection notification for ${target.scope} ${target.userId} in channel ${params.channelId}, no private chat with the bot (${describeDeliveryError(error)}).`,
+                );
+                unreachableTargets += 1;
+                continue;
+            }
+
             console.error(`Failed to send rejection notification to ${target.scope} ${target.userId}:`, error);
 
             Sentry.withScope((scope) => {
@@ -138,5 +155,6 @@ export async function dispatchRejectionNotifications(
         totalTargets: targets.length,
         successfulTargets,
         failedTargets,
+        unreachableTargets,
     };
 }
