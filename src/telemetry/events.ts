@@ -92,8 +92,12 @@ export interface TelemetryEventProperties {
 
 export type TelemetryEventName = keyof TelemetryEventProperties;
 
-/** Telegram user id, or null for events that belong to the deployment rather than a person. */
-export type TelemetryActor = number | null;
+/**
+ * A Telegram user id; "deployment" for events about the running process itself; "anonymous" when
+ * there is no identifiable subject, which sends the event without any distinct id so that PostHog
+ * creates no Person for it. Grep for "anonymous" to audit every event that deliberately has none.
+ */
+export type TelemetryActor = number | "deployment" | "anonymous";
 
 function toSnakeCase(key: string): string {
     return key.replace(/[A-Z]/g, (char) => `_${char.toLowerCase()}`);
@@ -134,9 +138,17 @@ export function captureEvent<E extends TelemetryEventName>(
     try {
         const channelId = "channelId" in properties ? properties.channelId : undefined;
 
+        // Left undefined for an anonymous event: posthog-node then substitutes a throwaway id and
+        // sets $process_person_profile, so the event is counted without inventing a Person. A
+        // channel is not a stand-in for one - its identity already travels in the properties.
+        const distinctId =
+            typeof actor === "number" ? userRef(actor)
+            : actor === "deployment" ? deploymentRef()
+            : undefined;
+
         emitTelemetry({
             event,
-            distinctId: actor === null ? deploymentRef() : userRef(actor),
+            ...(distinctId && { distinctId }),
             properties: toWireProperties(properties),
             ...(channelId && { groups: { channel: channelId } }),
         });

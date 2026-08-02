@@ -8,7 +8,8 @@ import { getPostHogApiKey, getPostHogHost, getTelemetryIdentitySalt } from "./en
  */
 export interface TelemetryPayload {
     event: string;
-    distinctId: string;
+    /** Absent for an anonymous event, which PostHog then ingests without creating a Person. */
+    distinctId?: string;
     properties: Record<string, string | number | boolean>;
     groups?: Record<string, string>;
 }
@@ -99,9 +100,9 @@ export function emitTelemetry(payload: TelemetryPayload): void {
     }
 
     client?.capture({
-        distinctId: scrubbed.distinctId,
         event: scrubbed.event,
         properties: scrubbed.properties,
+        ...(scrubbed.distinctId && { distinctId: scrubbed.distinctId }),
         ...(scrubbed.groups && { groups: scrubbed.groups }),
     });
 }

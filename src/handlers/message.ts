@@ -326,7 +326,7 @@ export function registerMessageHandler(): void {
 
                 // Deployment-scoped on purpose: this fires once per channel, so attaching the author
                 // would pin whichever admin happened to post first to what is a configuration gap.
-                captureEvent("channel_post_ignored", null, { channelId, channelTitle });
+                captureEvent("channel_post_ignored", "anonymous", { channelId, channelTitle });
             }
 
             return;
@@ -351,7 +351,7 @@ export function registerMessageHandler(): void {
                     const actor = extractMessageActor(firstMessage);
 
                     if (approved) {
-                        captureEvent("channel_post_allowed", actor?.id ?? null, {
+                        captureEvent("channel_post_allowed", actor?.id ?? "anonymous", {
                             channelId,
                             channelTitle,
                             contentKind: "album",
@@ -375,7 +375,7 @@ export function registerMessageHandler(): void {
                         const messageIds = messages.map((m) => m.message_id).sort((a, b) => a - b);
                         await ctx.api.deleteMessages(message.chat.id, messageIds);
 
-                        captureEvent("channel_post_moderated", actor?.id ?? null, {
+                        captureEvent("channel_post_moderated", actor?.id ?? "anonymous", {
                             channelId,
                             channelTitle,
                             contentKind: "album",
@@ -393,7 +393,7 @@ export function registerMessageHandler(): void {
                             notificationFailures: notifications.failedTargets,
                         });
 
-                        captureEvent("moderation_failed", actor?.id ?? null, {
+                        captureEvent("moderation_failed", actor?.id ?? "anonymous", {
                             channelId,
                             channelTitle,
                             contentKind: "album",
@@ -410,7 +410,7 @@ export function registerMessageHandler(): void {
         const actor = extractMessageActor(message);
 
         if (validateMessageCompliance(message, foreignAgentBlurb)) {
-            captureEvent("channel_post_allowed", actor?.id ?? null, {
+            captureEvent("channel_post_allowed", actor?.id ?? "anonymous", {
                 channelId,
                 channelTitle,
                 contentKind: "single",
@@ -432,7 +432,7 @@ export function registerMessageHandler(): void {
         try {
             await ctx.api.deleteMessage(message.chat.id, message.message_id);
 
-            captureEvent("channel_post_moderated", actor?.id ?? null, {
+            captureEvent("channel_post_moderated", actor?.id ?? "anonymous", {
                 channelId,
                 channelTitle,
                 contentKind: "single",
@@ -448,7 +448,7 @@ export function registerMessageHandler(): void {
                 notificationFailures: notifications.failedTargets,
             });
 
-            captureEvent("moderation_failed", actor?.id ?? null, {
+            captureEvent("moderation_failed", actor?.id ?? "anonymous", {
                 channelId,
                 channelTitle,
                 contentKind: "single",

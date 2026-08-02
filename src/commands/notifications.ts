@@ -85,7 +85,7 @@ async function processUserOperation(
 
         // The resulting count, never targetUserId - a recipient is a person, so the same rule
         // applies to them as to the acting user.
-        captureEvent("notification_recipient_added", ctx.from?.id ?? null, {
+        captureEvent("notification_recipient_added", ctx.from?.id ?? "anonymous", {
             channelId,
             channelTitle,
             recipientCount: getNotificationUsers(channelId).length,
@@ -105,7 +105,7 @@ async function processUserOperation(
     } else {
         removeNotificationUser(channelId, targetUserId);
 
-        captureEvent("notification_recipient_removed", ctx.from?.id ?? null, {
+        captureEvent("notification_recipient_removed", ctx.from?.id ?? "anonymous", {
             channelId,
             channelTitle,
             recipientCount: getNotificationUsers(channelId).length,

@@ -57,7 +57,9 @@ function channelPost(text: string, options: PostOptions = {}): Update {
             chat: { id: chatId, type: "channel", title: options.title ?? CHANNEL_TITLE },
             text,
             ...(options.mediaGroupId && { media_group_id: options.mediaGroupId }),
-            ...(options.fromId && { from: { id: options.fromId, is_bot: true, first_name: "Test" } }),
+            ...(options.fromId && {
+                from: { id: options.fromId, is_bot: options.fromId === botInfo.id, first_name: "Автор" },
+            }),
         },
     } as Update;
 }
@@ -132,10 +134,27 @@ describe("Handler telemetry", () => {
         expect(moderated?.groups).toEqual({ channel: String(CHANNEL_ID) });
     });
 
-    test("attributes an anonymous channel post to the deployment", async () => {
+    // Telegram usually omits `from` on channel posts, so this is the common path. It must not land
+    // on the deployment Person, which would otherwise absorb almost all channel activity.
+    test("creates no person for a channel post with no identifiable author", async () => {
         await botModule.bot.handleUpdate(channelPost("Ещё один пост без маркировки"));
 
-        expect(eventsNamed("channel_post_moderated")[0]?.distinctId).toStartWith("d_");
+        const [moderated] = eventsNamed("channel_post_moderated");
+        expect(moderated?.distinctId).toBeUndefined();
+        expect(moderated?.groups).toEqual({ channel: String(CHANNEL_ID) });
+    });
+
+    test("attributes a channel post to the author when Telegram provides one", async () => {
+        // Must not be a substring of CHANNEL_ID, or the leak assertion below matches the channel id
+        // that is legitimately in the payload.
+        const authorId = 555000111;
+
+        await botModule.bot.handleUpdate(channelPost("Пост от автора", { fromId: authorId }));
+
+        const [moderated] = eventsNamed("channel_post_moderated");
+        expect(moderated?.distinctId).toStartWith("u_");
+        expect(moderated?.properties.author_known).toBe(true);
+        expect(JSON.stringify(payloads)).not.toContain(String(authorId));
     });
 
     test("never records the post text or the blurb", async () => {
@@ -207,7 +226,8 @@ describe("Handler telemetry", () => {
             channel_id: String(chatId),
             channel_title: "Ненастроенный",
         });
-        expect(ignored[0]?.distinctId).toStartWith("d_");
+        // A channel's configuration gap is neither a person nor a fact about the deployment.
+        expect(ignored[0]?.distinctId).toBeUndefined();
     });
 
     // Proves the dedup is keyed per channel rather than being a global once-only flag.

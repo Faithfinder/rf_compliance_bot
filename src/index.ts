@@ -72,7 +72,7 @@ bot.start({
 
         // Reported from onStart rather than at module scope so it records that polling actually
         // established, not merely that the process booted.
-        captureEvent("bot_started", null, {
+        captureEvent("bot_started", "deployment", {
             environment: process.env.NODE_ENV || "development",
             fixedChannelMode: isFixedChannelMode(),
             ownerCommandsEnabled: getBotOwnerId() !== null,

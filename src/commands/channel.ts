@@ -70,7 +70,7 @@ async function processChannelSelection(
 
     identifyChannel(channelInfo.id, channelInfo.title);
 
-    captureEvent("channel_configured", ctx.from?.id ?? null, {
+    captureEvent("channel_configured", ctx.from?.id ?? "anonymous", {
         channelId: channelInfo.id,
         channelTitle: channelInfo.title,
         source,
