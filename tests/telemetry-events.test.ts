@@ -12,9 +12,8 @@ const CHANNEL_ID = -1009876543211;
 const CHANNEL_TITLE = "Канал телеметрии";
 const NOTIFY_USER_ID = 556;
 
-// Channels deliberately left without a blurb, to exercise the ignored-channel path. Each test that
-// depends on the once-per-channel dedup uses its own id, because the set that backs it lives for the
-// lifetime of the module and is not resettable from here.
+// Left without a blurb on purpose. Each dedup test needs its own id: the set backing the
+// once-per-channel behaviour lives for the lifetime of the module and cannot be reset from here.
 const UNCONFIGURED_CHANNEL_ID = -1009000000001;
 const OTHER_UNCONFIGURED_CHANNEL_ID = -1009000000002;
 
@@ -147,8 +146,6 @@ describe("Handler telemetry", () => {
         expect(serialized).not.toContain("ИНОСТРАННЫМ");
     });
 
-    // The denominator for the compliance rate. Before this existed, a channel where everyone marked
-    // their posts correctly was indistinguishable from an idle or broken one.
     test("records a compliant channel post as allowed", async () => {
         await botModule.bot.handleUpdate(channelPost(`Пост с маркировкой. ${BLURB}`));
 
@@ -197,8 +194,7 @@ describe("Handler telemetry", () => {
         });
     });
 
-    // The dedup assertion that matters: both posts go through one test so the result cannot depend
-    // on test ordering.
+    // Both posts go through one test so the result cannot depend on test ordering.
     test("reports an unconfigured channel once, not once per post", async () => {
         const chatId = UNCONFIGURED_CHANNEL_ID;
 
@@ -211,7 +207,6 @@ describe("Handler telemetry", () => {
             channel_id: String(chatId),
             channel_title: "Ненастроенный",
         });
-        // A configuration gap belongs to the deployment, not to whoever posted first.
         expect(ignored[0]?.distinctId).toStartWith("d_");
     });
 

@@ -23,10 +23,8 @@ import {
 } from "./message-helpers";
 import { captureEvent, classifyPublishFailure } from "../telemetry/events";
 
-// A channel with no blurb configured produces a post the bot ignores every single time, so the fact
-// is reported once per channel rather than once per post. The set resets on restart, which is
-// deliberate - a fresh signal per deployment is useful - but it does mean the event count is not a
-// count of channels; read it as a unique-channel breakdown instead.
+// An unconfigured channel would otherwise report on every post, so the fact is reported once per
+// channel. Resets on restart, so the event count is not a count of channels - see CLAUDE.md.
 const reportedUnconfiguredChannels = new Set<string>();
 
 export function registerMessageHandler(): void {

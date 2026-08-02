@@ -15,9 +15,8 @@ export interface TelemetryPayload {
 
 export type TelemetrySink = (payload: TelemetryPayload) => void;
 
-// Telegram caps chat titles at 128 characters, so every value we legitimately send fits. A
-// longer string means a future event definition started carrying user-authored text, which is
-// dropped here rather than shipped to a third-party service.
+// Telegram caps chat titles at 128 characters, so every legitimate value fits. Anything longer
+// means an event definition started carrying user-authored text, and is dropped rather than sent.
 const MAX_PROPERTY_LENGTH = 128;
 
 const FLUSH_TIMEOUT_MS = 2000;
@@ -25,10 +24,6 @@ const FLUSH_TIMEOUT_MS = 2000;
 let client: PostHog | null = null;
 let sink: TelemetrySink | null = null;
 
-/**
- * Initializes PostHog product analytics
- * @returns true if PostHog was initialized, false otherwise
- */
 export function initializePostHog(): boolean {
     const apiKey = getPostHogApiKey();
 
@@ -73,9 +68,8 @@ export function initializePostHog(): boolean {
 }
 
 /**
- * Whether anything would consume a captured event. Call sites use this to skip building a payload -
- * and in particular to skip hashing, which requires a salt that only exists when telemetry is
- * configured. The test sink counts, otherwise the sink-based tests would observe nothing.
+ * Whether anything would consume a captured event. Call sites use this to skip hashing, which needs
+ * a salt that only exists when telemetry is configured. The test sink counts deliberately.
  */
 export function isTelemetryActive(): boolean {
     return client !== null || sink !== null;

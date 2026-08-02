@@ -6,10 +6,8 @@ import { captureEvent } from "./events";
 // every invocation of it would be recorded as an unknown command.
 const HIDDEN_COMMANDS = ["dump_db"];
 
-// A command token made of digits is far more likely to be a Telegram user id than a mistyped
-// command - /notify_add and /notify_remove take raw numeric ids as arguments, so the shape turns up
-// naturally. Unknown tokens are user-controlled, so any that could be an identifier are collapsed
-// into one harmless bucket rather than sent.
+// Unknown tokens are user-controlled, and a digit run is far more likely to be a Telegram user id
+// than a mistyped command, so anything id-shaped is collapsed into one bucket rather than sent.
 const IDENTIFIER_SHAPED = /\d{5,}/;
 
 function sanitizeUnknownCommand(command: string): string {
@@ -36,9 +34,8 @@ export function registerCommandTelemetry(): void {
             if (entity) {
                 const command = entity.text.slice(1).split("@")[0]?.toLowerCase() ?? "";
                 const text = ctx.msg?.text ?? "";
-                // Arguments are reduced to a boolean and never sent. /notify_add and /notify_remove
-                // carry a raw Telegram user id here, which is exactly what the hashing exists to
-                // protect, and /start deep link payloads are in the same position.
+                // Reduced to a boolean, never sent: /notify_add and /notify_remove carry a raw
+                // Telegram user id here, which is what the hashing exists to protect.
                 const hasArgs = text.slice(entity.offset + entity.length).trim() !== "";
 
                 if (knownCommands.has(command)) {
