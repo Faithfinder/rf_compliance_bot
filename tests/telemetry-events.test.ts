@@ -12,6 +12,14 @@ const CHANNEL_ID = -1009876543211;
 const CHANNEL_TITLE = "Канал телеметрии";
 const NOTIFY_USER_ID = 556;
 
+// Left without a blurb on purpose. Each dedup test needs its own id: the set backing the
+// once-per-channel behaviour lives for the lifetime of the module and cannot be reset from here.
+const UNCONFIGURED_CHANNEL_ID = -1009000000001;
+const OTHER_UNCONFIGURED_CHANNEL_ID = -1009000000002;
+
+// utils/media-groups.ts debounces album assembly by 200ms.
+const DEBOUNCE_WAIT_MS = 250;
+
 const botInfo: UserFromGetMe = {
     id: 42,
     is_bot: true,
@@ -30,16 +38,32 @@ const botInfo: UserFromGetMe = {
 
 let payloads: import("../src/config/posthog").TelemetryPayload[] = [];
 
-function channelPost(text: string): Update {
+interface PostOptions {
+    chatId?: number;
+    title?: string;
+    messageId?: number;
+    mediaGroupId?: string;
+    fromId?: number;
+}
+
+function channelPost(text: string, options: PostOptions = {}): Update {
+    const chatId = options.chatId ?? CHANNEL_ID;
+
     return {
         update_id: 1,
         channel_post: {
-            message_id: 10,
+            message_id: options.messageId ?? 10,
             date: 0,
-            chat: { id: CHANNEL_ID, type: "channel", title: CHANNEL_TITLE },
+            chat: { id: chatId, type: "channel", title: options.title ?? CHANNEL_TITLE },
             text,
+            ...(options.mediaGroupId && { media_group_id: options.mediaGroupId }),
+            ...(options.fromId && { from: { id: options.fromId, is_bot: true, first_name: "Test" } }),
         },
     } as Update;
+}
+
+function settle(): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, DEBOUNCE_WAIT_MS));
 }
 
 describe("Handler telemetry", () => {
@@ -122,8 +146,95 @@ describe("Handler telemetry", () => {
         expect(serialized).not.toContain("ИНОСТРАННЫМ");
     });
 
-    test("records nothing for a compliant channel post", async () => {
+    test("records a compliant channel post as allowed", async () => {
         await botModule.bot.handleUpdate(channelPost(`Пост с маркировкой. ${BLURB}`));
+
+        const allowed = eventsNamed("channel_post_allowed");
+        expect(allowed).toHaveLength(1);
+        expect(allowed[0]?.properties).toEqual({
+            channel_id: String(CHANNEL_ID),
+            channel_title: CHANNEL_TITLE,
+            content_kind: "single",
+            author_known: false,
+        });
+        expect(eventsNamed("channel_post_moderated")).toHaveLength(0);
+    });
+
+    test("does not record notification counts on an allowed post", async () => {
+        await botModule.bot.handleUpdate(channelPost(`Пост с маркировкой. ${BLURB}`));
+
+        const properties = eventsNamed("channel_post_allowed")[0]?.properties ?? {};
+        expect(properties).not.toHaveProperty("notified_targets");
+        expect(properties).not.toHaveProperty("notification_failures");
+    });
+
+    test("never records the text of an allowed post", async () => {
+        await botModule.bot.handleUpdate(channelPost(`Ещё один секрет в разрешённом посте. ${BLURB}`));
+
+        const serialized = JSON.stringify(payloads);
+        expect(serialized).not.toContain("секрет");
+        expect(serialized).not.toContain("ИНОСТРАННЫМ");
+    });
+
+    test("records a compliant album as allowed, with its size", async () => {
+        const mediaGroupId = "allowed-album-1";
+
+        await botModule.bot.handleUpdate(channelPost(`Первая часть. ${BLURB}`, { messageId: 20, mediaGroupId }));
+        await botModule.bot.handleUpdate(channelPost("Вторая часть", { messageId: 21, mediaGroupId }));
+        await settle();
+
+        const allowed = eventsNamed("channel_post_allowed");
+        expect(allowed).toHaveLength(1);
+        expect(allowed[0]?.properties).toEqual({
+            channel_id: String(CHANNEL_ID),
+            channel_title: CHANNEL_TITLE,
+            content_kind: "album",
+            album_size: 2,
+            author_known: false,
+        });
+    });
+
+    // Both posts go through one test so the result cannot depend on test ordering.
+    test("reports an unconfigured channel once, not once per post", async () => {
+        const chatId = UNCONFIGURED_CHANNEL_ID;
+
+        await botModule.bot.handleUpdate(channelPost("Первый пост", { chatId, title: "Ненастроенный" }));
+        await botModule.bot.handleUpdate(channelPost("Второй пост", { chatId, title: "Ненастроенный", messageId: 11 }));
+
+        const ignored = eventsNamed("channel_post_ignored");
+        expect(ignored).toHaveLength(1);
+        expect(ignored[0]?.properties).toEqual({
+            channel_id: String(chatId),
+            channel_title: "Ненастроенный",
+        });
+        expect(ignored[0]?.distinctId).toStartWith("d_");
+    });
+
+    // Proves the dedup is keyed per channel rather than being a global once-only flag.
+    test("still reports a different unconfigured channel", async () => {
+        await botModule.bot.handleUpdate(
+            channelPost("Пост", { chatId: OTHER_UNCONFIGURED_CHANNEL_ID, title: "Другой" }),
+        );
+
+        expect(eventsNamed("channel_post_ignored")).toHaveLength(1);
+        expect(eventsNamed("channel_post_ignored")[0]?.properties.channel_id).toBe(
+            String(OTHER_UNCONFIGURED_CHANNEL_ID),
+        );
+    });
+
+    test("neither moderates nor counts an unconfigured channel post", async () => {
+        await botModule.bot.handleUpdate(
+            channelPost("Пост", { chatId: UNCONFIGURED_CHANNEL_ID, title: "Ненастроенный", messageId: 12 }),
+        );
+
+        expect(eventsNamed("channel_post_allowed")).toHaveLength(0);
+        expect(eventsNamed("channel_post_moderated")).toHaveLength(0);
+    });
+
+    // The bot echoes published messages into the channel itself. Counting those would double-count
+    // every message_published.
+    test("records nothing for the bot's own channel post", async () => {
+        await botModule.bot.handleUpdate(channelPost(`Опубликовано ботом. ${BLURB}`, { fromId: botInfo.id }));
 
         expect(payloads).toHaveLength(0);
     });

@@ -76,6 +76,14 @@ export interface TelemetryEventProperties {
         notificationFailures: number;
         authorKnown: boolean;
     };
+    /** A post the bot inspected and left alone - the denominator for the compliance rate. */
+    channel_post_allowed: ChannelScoped & {
+        contentKind: ContentKind;
+        albumSize?: number;
+        authorKnown: boolean;
+    };
+    /** A post in a channel where no blurb is configured. Reported once per channel per process. */
+    channel_post_ignored: ChannelScoped;
     moderation_failed: ChannelScoped & {
         contentKind: ContentKind;
         albumSize?: number;

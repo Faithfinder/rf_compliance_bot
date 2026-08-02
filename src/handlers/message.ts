@@ -23,6 +23,10 @@ import {
 } from "./message-helpers";
 import { captureEvent, classifyPublishFailure } from "../telemetry/events";
 
+// An unconfigured channel would otherwise report on every post, so the fact is reported once per
+// channel. Resets on restart, so the event count is not a count of channels - see CLAUDE.md.
+const reportedUnconfiguredChannels = new Set<string>();
+
 export function registerMessageHandler(): void {
     bot.chatType("private").on("message", async (ctx) => {
         const userId = ctx.from?.id;
@@ -317,6 +321,14 @@ export function registerMessageHandler(): void {
         const foreignAgentBlurb = channelSettings?.foreignAgentBlurb;
 
         if (!foreignAgentBlurb) {
+            if (!reportedUnconfiguredChannels.has(channelId)) {
+                reportedUnconfiguredChannels.add(channelId);
+
+                // Deployment-scoped on purpose: this fires once per channel, so attaching the author
+                // would pin whichever admin happened to post first to what is a configuration gap.
+                captureEvent("channel_post_ignored", null, { channelId, channelTitle });
+            }
+
             return;
         }
 
@@ -331,16 +343,24 @@ export function registerMessageHandler(): void {
                 mediaGroupId,
                 message,
                 async (messages: Message[], approved: boolean) => {
-                    if (approved) {
-                        return;
-                    }
-
                     const firstMessage = messages[0];
                     if (!firstMessage) {
                         return;
                     }
 
                     const actor = extractMessageActor(firstMessage);
+
+                    if (approved) {
+                        captureEvent("channel_post_allowed", actor?.id ?? null, {
+                            channelId,
+                            channelTitle,
+                            contentKind: "album",
+                            albumSize: messages.length,
+                            authorKnown: typeof actor?.id === "number",
+                        });
+
+                        return;
+                    }
 
                     const notifications = await handleRejectionWithNotifications({
                         channelId,
@@ -387,11 +407,18 @@ export function registerMessageHandler(): void {
             return;
         }
 
+        const actor = extractMessageActor(message);
+
         if (validateMessageCompliance(message, foreignAgentBlurb)) {
+            captureEvent("channel_post_allowed", actor?.id ?? null, {
+                channelId,
+                channelTitle,
+                contentKind: "single",
+                authorKnown: typeof actor?.id === "number",
+            });
+
             return;
         }
-
-        const actor = extractMessageActor(message);
 
         const notifications = await handleRejectionWithNotifications({
             channelId,

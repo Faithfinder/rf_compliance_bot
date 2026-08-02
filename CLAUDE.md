@@ -58,6 +58,13 @@ is what lets call sites stay unguarded and CI run without any PostHog env vars.
 - `captureEvent` returns early unless `isTelemetryActive()`, because hashing needs a salt that only
   exists when telemetry is configured. Keep that check first — without it, every capture in a
   deployment with no PostHog key would try to hash and log a failure.
+- Compliant posts are captured too (`channel_post_allowed`), not just violations — that event is the
+  denominator of the compliance rate, so removing it would make the rate uncomputable rather than
+  merely less detailed.
+- `channel_post_ignored` is deduplicated by a module-level `Set` in
+  [src/handlers/message.ts](src/handlers/message.ts) and fires once per channel per process, so its
+  event count is **not** a channel count — it resets on restart. It is also deployment-scoped rather
+  than attributed to an author, since the author would be whoever happened to post first.
 - Both teardown paths in [src/index.ts](src/index.ts) must call `closePostHog()`: `gracefulShutdown`
   and the `bot.start().catch()` handler.
 
