@@ -87,10 +87,10 @@ describe("Telemetry capture", () => {
         expect(serialized).not.toContain(`:${USER_ID},`);
     });
 
-    test("uses a deployment distinct id when there is no actor", () => {
+    test("uses a deployment distinct id for a deployment event", () => {
         const payloads = collect();
 
-        captureEvent("bot_started", null, {
+        captureEvent("bot_started", "deployment", {
             environment: "test",
             fixedChannelMode: false,
             ownerCommandsEnabled: false,
@@ -98,6 +98,48 @@ describe("Telemetry capture", () => {
         });
 
         expect(payloads[0]?.distinctId).toStartWith("d_");
+    });
+
+    // No stand-in identity: posthog-node substitutes a throwaway id and suppresses person
+    // processing, so an unidentifiable subject does not accumulate on some other Person.
+    test("sends no distinct id for an anonymous event", () => {
+        const payloads = collect();
+
+        captureEvent("channel_post_moderated", "anonymous", {
+            channelId: CHANNEL_ID,
+            channelTitle: CHANNEL_TITLE,
+            contentKind: "single",
+            notifiedTargets: 1,
+            notificationFailures: 0,
+            authorKnown: false,
+        });
+
+        expect(payloads).toHaveLength(1);
+        expect(payloads[0]?.distinctId).toBeUndefined();
+        // The channel dimension has to survive, since it is what replaces person attribution.
+        expect(payloads[0]?.groups).toEqual({ channel: CHANNEL_ID });
+        expect(payloads[0]?.properties.channel_id).toBe(CHANNEL_ID);
+    });
+
+    // The anonymous path never hashes, so it must not depend on the salt the way userRef does.
+    test("captures an anonymous event with no salt configured", () => {
+        const payloads = collect();
+        const salt = process.env.POSTHOG_ID_SALT;
+        delete process.env.POSTHOG_ID_SALT;
+
+        try {
+            captureEvent("channel_post_ignored", "anonymous", {
+                channelId: CHANNEL_ID,
+                channelTitle: CHANNEL_TITLE,
+            });
+
+            expect(payloads).toHaveLength(1);
+            expect(payloads[0]?.distinctId).toBeUndefined();
+        } finally {
+            if (salt !== undefined) {
+                process.env.POSTHOG_ID_SALT = salt;
+            }
+        }
     });
 
     test("groups channel-scoped events by the raw channel id", () => {

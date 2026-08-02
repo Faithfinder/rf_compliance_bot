@@ -63,8 +63,15 @@ is what lets call sites stay unguarded and CI run without any PostHog env vars.
   merely less detailed.
 - `channel_post_ignored` is deduplicated by a module-level `Set` in
   [src/handlers/message.ts](src/handlers/message.ts) and fires once per channel per process, so its
-  event count is **not** a channel count — it resets on restart. It is also deployment-scoped rather
-  than attributed to an author, since the author would be whoever happened to post first.
+  event count is **not** a channel count — it resets on restart.
+- **`TelemetryActor` has three kinds and the distinction matters.** A user id hashes to `u_…`;
+  `"deployment"` is reserved for events about the process itself (only `bot_started`) and yields
+  `d_…`; `"anonymous"` sends **no** distinct id, so posthog-node substitutes a throwaway one and sets
+  `$process_person_profile: false` and PostHog creates no Person. Never invent a stand-in identity —
+  attributing anonymous channel posts to the deployment previously collapsed nearly all channel
+  traffic onto one pseudo-person, and a channel is not a substitute either since its identity already
+  travels in `channel_id` / `channel_title` / `$groups.channel` (verified to survive on anonymous
+  events). Unique-user counts do not apply to anonymous events; use event counts and the channel group.
 - Both teardown paths in [src/index.ts](src/index.ts) must call `closePostHog()`: `gracefulShutdown`
   and the `bot.start().catch()` handler.
 

@@ -39,14 +39,14 @@ export function registerCommandTelemetry(): void {
                 const hasArgs = text.slice(entity.offset + entity.length).trim() !== "";
 
                 if (knownCommands.has(command)) {
-                    captureEvent("command_invoked", ctx.from?.id ?? null, {
+                    captureEvent("command_invoked", ctx.from?.id ?? "anonymous", {
                         command,
                         chatType: ctx.chat.type,
                         hasArgs,
                         channelConfigured: ctx.session.channelConfig !== undefined,
                     });
                 } else {
-                    captureEvent("unknown_command", ctx.from?.id ?? null, {
+                    captureEvent("unknown_command", ctx.from?.id ?? "anonymous", {
                         command: sanitizeUnknownCommand(command),
                         chatType: ctx.chat.type,
                     });
