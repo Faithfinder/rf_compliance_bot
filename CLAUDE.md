@@ -28,40 +28,18 @@ Centralized in [src/handlers/message-helpers.ts](src/handlers/message-helpers.ts
 
 ## Telemetry
 
-PostHog product analytics, alongside Sentry. [src/config/posthog.ts](src/config/posthog.ts) mirrors
-`config/sentry.ts`: a missing `POSTHOG_API_KEY` disables it and every capture becomes a no-op, which
-is what lets call sites stay unguarded and CI run without any PostHog env vars.
+PostHog product analytics, alongside Sentry. The `add-telemetry-event` skill has the procedure and the
+privacy rules (people are hashed, channels are not; never send user-authored text). Beyond it:
 
-- **Events are declared only in `TelemetryEventProperties`** in [src/telemetry/events.ts](src/telemetry/events.ts);
-  `captureEvent(event, actor, properties)` is the only call path. See the `add-telemetry-event` skill.
-- **`captureEvent` never throws and is never awaited.** Load-bearing: some call sites sit inside `try`
-  blocks whose `catch` tells the user that publishing failed, others inside the media-group debounce
-  timer, outside grammY's error handling, where a throw kills the process.
-- **Privacy is asymmetric, deliberately.** Channel ids and titles go in plaintext — a moderated channel
-  is public information. Anything identifying a *person* does not: user ids go through
-  [src/telemetry/identity.ts](src/telemetry/identity.ts) as a salted HMAC, and usernames, display names,
-  author signatures, message text and the blurb text are never sent. Call sites pass **raw** ids;
-  identity.ts is the only place that hashes, so redaction has one audit point.
-- The only sanctioned fragment of user input is the command token in
-  [src/telemetry/commands.ts](src/telemetry/commands.ts), bounded and with arguments stripped —
-  command arguments carry raw Telegram user ids (`/notify_add <id>`).
-- **`POSTHOG_ID_SALT` has no default and no fallback.** With `POSTHOG_API_KEY` set but no salt,
-  `initializePostHog()` throws and the process does not start. Do not reintroduce a default: a
-  predictably-salted digest over the small Telegram id space is reversible by brute force.
-- `captureEvent` returns early unless `isTelemetryActive()` — keep that check first, since hashing needs
-  a salt that only exists when telemetry is configured.
-- Compliant posts are captured too (`channel_post_allowed`): that event is the denominator of the
-  compliance rate, so removing it makes the rate uncomputable.
-- `channel_post_ignored` is deduplicated by a module-level `Set` in
-  [src/handlers/message.ts](src/handlers/message.ts) and fires once per channel per process, so its
-  event count is **not** a channel count — it resets on restart.
-- **`TelemetryActor` has three kinds.** A user id hashes to `u_…`; `"deployment"` is reserved for events
-  about the process itself (only `bot_started`) and yields `d_…`; `"anonymous"` sends **no** distinct id,
-  so PostHog creates no Person. Never invent a stand-in identity — attributing anonymous channel posts to
-  the deployment collapsed nearly all channel traffic onto one pseudo-person, and a channel is not a
-  substitute either, since its identity already travels in `channel_id` / `channel_title` /
-  `$groups.channel`. Unique-user counts do not apply to anonymous events; use event counts and the
-  channel group.
+- **A missing `POSTHOG_API_KEY` makes every capture a no-op**, which is what lets call sites stay
+  unguarded and CI run without any PostHog env vars.
+- **`POSTHOG_ID_SALT` has no default and no fallback.** With a key but no salt, `initializePostHog()`
+  throws and the process does not start. Do not reintroduce a default: a predictably-salted digest over
+  the small Telegram id space is reversible by brute force.
+- **`TelemetryActor` has three kinds** — a user id (hashed to `u_…`), `"deployment"` for events about the
+  process itself, and `"anonymous"`, which sends no distinct id so PostHog creates no Person. Never
+  invent a stand-in identity for anonymous channel posts: their channel already travels in
+  `channel_id` / `channel_title` / `$groups.channel`.
 - Both teardown paths in [src/index.ts](src/index.ts) must call `closePostHog()`: `gracefulShutdown`
   and the `bot.start().catch()` handler.
 
