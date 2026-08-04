@@ -93,10 +93,10 @@ async function processUserOperation(
 
         const message = FormattedString.join(
             [
-                "✅ Администратор успешно добавлен в список уведомлений!",
+                "✅ Администратор добавлен в список уведомлений!",
                 fmt`📢 ${fmt`${b}Канал:${b}`} ${formatChannelInfo(channelId, channelTitle)}`,
                 fmt`🆔 ${fmt`${b}ID пользователя:${b}`} ${fmt`${code}${String(targetUserId)}${code}`}`,
-                "Администратор будет получать уведомления, когда сообщения отклоняются из-за отсутствия текста иностранного агента.",
+                "Он будет получать копию каждого поста, удалённого из канала или отклонённого при публикации из-за отсутствия маркировки.",
             ],
             "\n\n",
         );
@@ -135,12 +135,12 @@ async function handleUserSelection(
         ctx.session.awaitingNotificationUserSelection = operation;
 
         const keyboard = createUserSelectionKeyboard(operation === "add" ? 1 : 2);
-        const action = operation === "add" ? "добавления" : "удаления";
-        const preposition = operation === "add" ? "в" : "из";
+        const prompt =
+            operation === "add" ?
+                "👤 Выберите администратора, которого добавить в список уведомлений."
+            :   "👤 Выберите администратора, которого убрать из списка уведомлений.";
 
-        return ctx.reply(`👤 Пожалуйста, выберите администратора для ${action} ${preposition} списка уведомлений.`, {
-            reply_markup: keyboard,
-        });
+        return ctx.reply(prompt, { reply_markup: keyboard });
     }
 
     const targetIdentifier = (args as string).trim();
@@ -177,7 +177,7 @@ export function registerNotificationCommands(): void {
         let message = fmt`🔔 ${fmt`${b}Список уведомлений${b}`}\n\n📢 ${fmt`${b}Канал:${b}`} ${formatChannelInfo(validation.channelId, validation.channelTitle)}\n\n`;
 
         if (notificationUserIds.length === 0) {
-            message = fmt`${message}Список пуст. Используйте /notify_add для добавления администраторов.`;
+            message = fmt`${message}Список пуст — копии удалённых постов никому не уходят. Модерация при этом работает: посты удаляются молча.\n\nДобавить получателя: /notify_add`;
         } else {
             message = fmt`${message}👥 ${fmt`${b}Подписчики на уведомления:${b}`}\n`;
 

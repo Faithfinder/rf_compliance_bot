@@ -24,7 +24,7 @@ export function registerSettingsCommand(): void {
         if (isViewMode) {
             const channelSettings = getChannelSettings(channelConfig.channelId);
 
-            let message = fmt`⚙️ ${fmt`${b}Настройки канала${b}`}\n\n📢 ${fmt`${b}Канал:${b}`} ${formatChannelInfo(channelConfig.channelId, channelConfig.channelTitle)}\n\n🌍 ${fmt`${b}Текст иностранного агента:${b}`}\n`;
+            let message = fmt`⚙️ ${fmt`${b}Настройки канала${b}`}\n\n📢 ${fmt`${b}Канал:${b}`} ${formatChannelInfo(channelConfig.channelId, channelConfig.channelTitle)}\n\n🌍 ${fmt`${b}Текст маркировки:${b}`}\n`;
 
             if (channelSettings?.foreignAgentBlurb) {
                 message = fmt`${message}${channelSettings.foreignAgentBlurb}\n\n`;
@@ -32,7 +32,7 @@ export function registerSettingsCommand(): void {
                 message = fmt`${message}${fmt`${i}Не настроено${i}`}\n\n`;
             }
 
-            message = fmt`${message}Чтобы обновить текст иностранного агента, используйте:\n/set_fa_blurb <ваш текст>`;
+            message = fmt`${message}Этот текст проверяется в обоих режимах — и при модерации канала, и при публикации через бота.\n\nЧтобы обновить его:\n/set_fa_blurb <ваш текст>`;
 
             const entities = message.entities;
             return ctx.reply(message.text, entities.length ? { entities } : undefined);
@@ -50,7 +50,7 @@ export function registerSettingsCommand(): void {
         const newBlurb = (args as string).trim();
 
         if (newBlurb.length === 0) {
-            return ctx.reply("❌ Текст иностранного агента не может быть пустым. Пожалуйста, укажите текст.");
+            return ctx.reply("❌ Текст маркировки не может быть пустым. Укажите текст после команды.");
         }
 
         const previousBlurb = getChannelSettings(channelConfig.channelId)?.foreignAgentBlurb;
@@ -65,8 +65,8 @@ export function registerSettingsCommand(): void {
             isUpdate: previousBlurb !== undefined,
         });
 
-        let confirmMessage = fmt`✅ Текст иностранного агента успешно обновлен!\n\n📢 ${fmt`${b}Канал:${b}`} ${formatChannelInfo(channelConfig.channelId, channelConfig.channelTitle)}\n\n🌍 ${fmt`${b}Новый текст иностранного агента:${b}`}\n`;
-        confirmMessage = fmt`${confirmMessage}${newBlurb}`;
+        let confirmMessage = fmt`✅ Текст маркировки обновлён!\n\n📢 ${fmt`${b}Канал:${b}`} ${formatChannelInfo(channelConfig.channelId, channelConfig.channelTitle)}\n\n🌍 ${fmt`${b}Новый текст маркировки:${b}`}\n`;
+        confirmMessage = fmt`${confirmMessage}${newBlurb}\n\nТеперь я проверяю посты в канале на эту строку. Что настроено — /info.`;
 
         const entities = confirmMessage.entities;
         return ctx.reply(confirmMessage.text, entities.length ? { entities } : undefined);
