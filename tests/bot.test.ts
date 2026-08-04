@@ -14,6 +14,24 @@ beforeAll(async () => {
     utils = await import("../src/utils");
 });
 
+const allPassing = (): ChannelRequirements => ({
+    channelExists: true,
+    botIsAdded: true,
+    botCanPost: true,
+    botCanDelete: true,
+    foreignAgentBlurbConfigured: true,
+    notificationRecipientsConfigured: true,
+});
+
+const allFailing = (): ChannelRequirements => ({
+    channelExists: false,
+    botIsAdded: false,
+    botCanPost: false,
+    botCanDelete: false,
+    foreignAgentBlurbConfigured: false,
+    notificationRecipientsConfigured: false,
+});
+
 describe("Utility Functions", () => {
     test("should format channel info with title", () => {
         const channelId = "-1001234567890";
@@ -41,67 +59,145 @@ describe("Utility Functions", () => {
         expect(formatted.entities).toEqual([{ type: "code", offset: 0, length: 14 }]);
     });
 
-    test("should format channel requirements with all checks passed", () => {
-        const requirements: ChannelRequirements = {
-            channelExists: true,
-            botIsAdded: true,
-            botCanPost: true,
-            foreignAgentBlurbConfigured: true,
-        };
+    test("should format common requirements with all checks passed", () => {
+        const formatted = utils.formatCommonRequirements(allPassing());
 
-        const formatted = utils.formatChannelRequirements(requirements);
-        expect(formatted).toContain("✅ Настроенный канал существует");
-        expect(formatted).toContain("✅ 🤖 Бот добавлен в канал");
-        expect(formatted).toContain("✅ 🤖 Бот может публиковать сообщения в канал");
-        expect(formatted).toContain("✅ 🌍 Текст иностранного агента настроен");
+        expect(formatted).toContain("✅ Канал доступен");
+        expect(formatted).toContain("✅ 🤖 Бот — администратор канала");
+        expect(formatted).toContain("✅ 🌍 Текст маркировки задан");
     });
 
-    test("should format channel requirements with all checks failed", () => {
-        const requirements: ChannelRequirements = {
-            channelExists: false,
-            botIsAdded: false,
-            botCanPost: false,
+    test("should format common requirements with all checks failed", () => {
+        const formatted = utils.formatCommonRequirements(allFailing());
+
+        expect(formatted).toContain("❌ Канал не существует или бот не имеет к нему доступа");
+        expect(formatted).toContain("❌ 🤖 Бот не администратор канала");
+        expect(formatted).toContain("❌ 🌍 Текст маркировки не задан");
+    });
+});
+
+describe("Moderation requirements", () => {
+    test("reports the delete right as a hard failure", () => {
+        const formatted = utils.formatModerationRequirements({ ...allPassing(), botCanDelete: false });
+
+        expect(formatted).toContain("❌ 🤖 У бота нет права «Удалять сообщения»");
+    });
+
+    // Moderation still deletes with an empty recipient list, so the line is informational and must
+    // not read as a failure the admin has to fix.
+    test("reports an empty recipient list as informational, not a failure", () => {
+        const formatted = utils.formatModerationRequirements({
+            ...allPassing(),
+            notificationRecipientsConfigured: false,
+        });
+
+        expect(formatted).toContain("ℹ️ 🔔 Получатели уведомлений не заданы");
+        expect(formatted).not.toContain("❌ 🔔");
+    });
+
+    test("passes without notification recipients", () => {
+        expect(utils.moderationRequirementsPassed({ ...allPassing(), notificationRecipientsConfigured: false })).toBe(
+            true,
+        );
+    });
+
+    test.each([["channelExists"], ["botIsAdded"], ["botCanDelete"], ["foreignAgentBlurbConfigured"]] as const)(
+        "fails when %s is missing",
+        (field) => {
+            expect(utils.moderationRequirementsPassed({ ...allPassing(), [field]: false })).toBe(false);
+        },
+    );
+});
+
+describe("Publish requirements", () => {
+    // Publishing is opt-in, so unmet items are ➖ rather than ❌ - nothing is broken when the mode is
+    // simply not set up.
+    test("reports unmet requirements as optional rather than failed", () => {
+        const formatted = utils.formatPublishRequirements({ ...allPassing(), botCanPost: false }, null);
+
+        expect(formatted).toContain("➖ 🤖 У бота нет права «Публиковать сообщения»");
+        expect(formatted).not.toContain("❌");
+    });
+
+    test("includes the user's own edit right when permissions are known", () => {
+        const withRight = utils.formatPublishRequirements(allPassing(), {
+            isMember: true,
+            isAdmin: true,
+            canEditMessages: true,
+        });
+        const withoutRight = utils.formatPublishRequirements(allPassing(), {
+            isMember: true,
+            isAdmin: true,
+            canEditMessages: false,
+        });
+
+        expect(withRight).toContain("✅ 👤 У вас есть право «Редактировать сообщения»");
+        expect(withoutRight).toContain("➖ 👤 У вас нет права «Редактировать сообщения»");
+    });
+
+    test("omits the user line when permissions are unavailable", () => {
+        expect(utils.formatPublishRequirements(allPassing(), null)).not.toContain("👤");
+    });
+
+    // publishRequirementsPassed replaced allRequirementsPassed over the same four fields, which is
+    // what keeps the `requirementsSatisfied` telemetry property comparable across the rename.
+    test("ignores the delete right and the recipient list", () => {
+        expect(
+            utils.publishRequirementsPassed({
+                ...allPassing(),
+                botCanDelete: false,
+                notificationRecipientsConfigured: false,
+            }),
+        ).toBe(true);
+    });
+
+    test.each([["channelExists"], ["botIsAdded"], ["botCanPost"], ["foreignAgentBlurbConfigured"]] as const)(
+        "fails when %s is missing",
+        (field) => {
+            expect(utils.publishRequirementsPassed({ ...allPassing(), [field]: false })).toBe(false);
+        },
+    );
+});
+
+describe("formatNextSetupStep", () => {
+    test("returns null once moderation works", () => {
+        expect(utils.formatNextSetupStep(allPassing())).toBeNull();
+    });
+
+    test("returns null when only the recipient list is empty", () => {
+        expect(utils.formatNextSetupStep({ ...allPassing(), notificationRecipientsConfigured: false })).toBeNull();
+    });
+
+    test("returns null when only publishing is unavailable", () => {
+        expect(utils.formatNextSetupStep({ ...allPassing(), botCanPost: false })).toBeNull();
+    });
+
+    test("asks for the blurb before the delete right", () => {
+        const step = utils.formatNextSetupStep({
+            ...allPassing(),
             foreignAgentBlurbConfigured: false,
-        };
+            botCanDelete: false,
+        });
 
-        const formatted = utils.formatChannelRequirements(requirements);
-        expect(formatted).toContain("❌ Канал не существует или бот не может получить к нему доступ");
-        expect(formatted).toContain("❌ 🤖 Бот не добавлен в канал");
-        expect(formatted).toContain("❌ 🤖 Бот не имеет разрешения публиковать сообщения");
-        expect(formatted).toContain("❌ 🌍 Текст иностранного агента не настроен");
+        expect(step).toContain("/set_fa_blurb");
     });
 
-    test("should return true when all requirements are passed", () => {
-        const requirements: ChannelRequirements = {
-            channelExists: true,
-            botIsAdded: true,
-            botCanPost: true,
-            foreignAgentBlurbConfigured: true,
-        };
+    test("asks for the delete right once the blurb is set", () => {
+        const step = utils.formatNextSetupStep({ ...allPassing(), botCanDelete: false });
 
-        expect(utils.allRequirementsPassed(requirements)).toBe(true);
+        expect(step).toContain("«Удалять сообщения»");
     });
 
-    test("should return false when foreign agent blurb is not configured", () => {
-        const requirements: ChannelRequirements = {
-            channelExists: true,
-            botIsAdded: true,
-            botCanPost: true,
-            foreignAgentBlurbConfigured: false,
-        };
+    test("asks to add the bot as admin before the blurb", () => {
+        const step = utils.formatNextSetupStep({ ...allFailing(), channelExists: true });
 
-        expect(utils.allRequirementsPassed(requirements)).toBe(false);
+        expect(step).toContain("администратором");
     });
 
-    test("should return false when any requirement fails", () => {
-        const requirements: ChannelRequirements = {
-            channelExists: false,
-            botIsAdded: true,
-            botCanPost: true,
-            foreignAgentBlurbConfigured: true,
-        };
+    test("reports an unreachable channel before anything else", () => {
+        const step = utils.formatNextSetupStep(allFailing());
 
-        expect(utils.allRequirementsPassed(requirements)).toBe(false);
+        expect(step).toContain("канал недоступен");
     });
 });
 

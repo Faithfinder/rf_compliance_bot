@@ -1,7 +1,7 @@
 import { FormattedString, code, fmt } from "@grammyjs/parse-mode";
 import { bot } from "./config/bot";
 import { isFixedChannelMode } from "./config/environment";
-import { getChannelSettings } from "./db/database";
+import { getChannelSettings, getNotificationUsers } from "./db/database";
 
 /**
  * Text shown when no channel is configured. In fixed-channel mode /setchannel is never
@@ -9,11 +9,11 @@ import { getChannelSettings } from "./db/database";
  */
 export function formatNoChannelMessage(): string {
     if (isFixedChannelMode()) {
-        return "Канал для публикации не настроен. Обратитесь к администратору бота.";
+        return "Канал не настроен. Обратитесь к администратору бота.";
     }
 
     return (
-        "Вы еще не настроили канал.\n\n" +
+        "Канал ещё не выбран.\n\n" +
         "Используйте /setchannel <@channel или ID> для настройки.\n" +
         "Пример: /setchannel @mychannel"
     );
@@ -88,7 +88,9 @@ export interface ChannelRequirements {
     channelExists: boolean;
     botIsAdded: boolean;
     botCanPost: boolean;
+    botCanDelete: boolean;
     foreignAgentBlurbConfigured: boolean;
+    notificationRecipientsConfigured: boolean;
 }
 
 /**
@@ -101,7 +103,9 @@ export async function checkChannelRequirements(channelId: string): Promise<Chann
         channelExists: false,
         botIsAdded: false,
         botCanPost: false,
+        botCanDelete: false,
         foreignAgentBlurbConfigured: false,
+        notificationRecipientsConfigured: false,
     };
 
     try {
@@ -121,6 +125,9 @@ export async function checkChannelRequirements(channelId: string): Promise<Chann
             requirements.botCanPost =
                 botMember.status === "creator" ||
                 (botMember.status === "administrator" && botMember.can_post_messages === true);
+            requirements.botCanDelete =
+                botMember.status === "creator" ||
+                (botMember.status === "administrator" && botMember.can_delete_messages === true);
         }
     } catch (error) {
         console.error("Permission check failed:", error);
@@ -128,44 +135,123 @@ export async function checkChannelRequirements(channelId: string): Promise<Chann
 
     const channelSettings = getChannelSettings(channelId);
     requirements.foreignAgentBlurbConfigured = !!channelSettings?.foreignAgentBlurb;
+    requirements.notificationRecipientsConfigured = getNotificationUsers(channelId).length > 0;
 
     return requirements;
 }
 
 /**
- * Formats channel requirements as a text message
- * @param requirements The requirements to format
- * @returns Formatted requirements text
+ * Prerequisites both modes share: the channel has to be reachable, the bot has to be an admin of
+ * it, and the blurb is what every check compares against.
  */
-export function formatChannelRequirements(requirements: ChannelRequirements): string {
+export function formatCommonRequirements(requirements: ChannelRequirements): string {
     const lines = [
-        requirements.channelExists ?
-            "✅ Настроенный канал существует"
-        :   "❌ Канал не существует или бот не может получить к нему доступ",
-        requirements.botIsAdded ? "✅ 🤖 Бот добавлен в канал" : "❌ 🤖 Бот не добавлен в канал",
-        requirements.botCanPost ?
-            "✅ 🤖 Бот может публиковать сообщения в канал"
-        :   "❌ 🤖 Бот не имеет разрешения публиковать сообщения",
-        requirements.foreignAgentBlurbConfigured ?
-            "✅ 🌍 Текст иностранного агента настроен"
-        :   "❌ 🌍 Текст иностранного агента не настроен",
+        requirements.channelExists ? "✅ Канал доступен" : "❌ Канал не существует или бот не имеет к нему доступа",
+        requirements.botIsAdded ? "✅ 🤖 Бот — администратор канала" : "❌ 🤖 Бот не администратор канала",
+        requirements.foreignAgentBlurbConfigured ? "✅ 🌍 Текст маркировки задан" : (
+            "❌ 🌍 Текст маркировки не задан — бот ничего не проверяет"
+        ),
     ];
 
     return lines.join("\n");
 }
 
 /**
- * Checks if all channel requirements are passed
- * @param requirements The requirements to check
- * @returns True if all requirements are met
+ * Channel moderation, the primary mode. Recipients are informational (ℹ️), not a requirement:
+ * moderation deletes unmarked posts regardless, it just forwards a copy to nobody.
  */
-export function allRequirementsPassed(requirements: ChannelRequirements): boolean {
+export function formatModerationRequirements(requirements: ChannelRequirements): string {
+    const lines = [
+        requirements.botCanDelete ?
+            "✅ 🤖 Бот может удалять сообщения"
+        :   "❌ 🤖 У бота нет права «Удалять сообщения» — немаркированные посты останутся в канале",
+        requirements.notificationRecipientsConfigured ?
+            "✅ 🔔 Получатели уведомлений заданы"
+        :   "ℹ️ 🔔 Получатели уведомлений не заданы — копии удалённых постов никому не уходят (/notify_add)",
+    ];
+
+    return lines.join("\n");
+}
+
+/**
+ * Publishing through the bot, the opt-in strict mode. Unmet items are ➖ rather than ❌: nothing is
+ * broken when this mode is simply not set up.
+ */
+export function formatPublishRequirements(
+    requirements: ChannelRequirements,
+    permissions?: UserChannelPermissions | null,
+): string {
+    const lines = [
+        requirements.botCanPost ?
+            "✅ 🤖 Бот может публиковать сообщения"
+        :   "➖ 🤖 У бота нет права «Публиковать сообщения» — публикация через бота недоступна",
+    ];
+
+    if (permissions) {
+        lines.push(
+            permissions.canEditMessages ?
+                "✅ 👤 У вас есть право «Редактировать сообщения»"
+            :   "➖ 👤 У вас нет права «Редактировать сообщения» — публиковать через бота вы не сможете",
+        );
+    }
+
+    return lines.join("\n");
+}
+
+/**
+ * Whether channel moderation is live. Notification recipients are deliberately absent: an empty
+ * list changes who hears about a deletion, not whether it happens.
+ */
+export function moderationRequirementsPassed(requirements: ChannelRequirements): boolean {
+    return (
+        requirements.channelExists &&
+        requirements.botIsAdded &&
+        requirements.botCanDelete &&
+        requirements.foreignAgentBlurbConfigured
+    );
+}
+
+/**
+ * Whether publishing through the bot is available at the channel level. The user's own
+ * "edit messages" right is per-user and checked separately at publish time.
+ *
+ * The field set is unchanged from the former allRequirementsPassed(), which keeps the
+ * `requirementsSatisfied` telemetry property comparable across this rename.
+ */
+export function publishRequirementsPassed(requirements: ChannelRequirements): boolean {
     return (
         requirements.channelExists &&
         requirements.botIsAdded &&
         requirements.botCanPost &&
         requirements.foreignAgentBlurbConfigured
     );
+}
+
+/**
+ * The single most useful next action towards working moderation, or null once it is live. Only
+ * moderation gaps appear here - publishing is opt-in, so its unmet requirements are reported by
+ * /info rather than pushed at the user as a to-do.
+ */
+export function formatNextSetupStep(requirements: ChannelRequirements): string | null {
+    if (!requirements.channelExists) {
+        return isFixedChannelMode() ?
+                "Следующий шаг: канал недоступен. Обратитесь к администратору бота."
+            :   "Следующий шаг: канал недоступен. Выберите другой командой /setchannel.";
+    }
+
+    if (!requirements.botIsAdded) {
+        return "Следующий шаг: добавьте бота в канал администратором с правом «Удалять сообщения».";
+    }
+
+    if (!requirements.foreignAgentBlurbConfigured) {
+        return "Следующий шаг: задайте текст маркировки командой /set_fa_blurb <ваш текст>. Пока он не задан, бот не проверяет посты.";
+    }
+
+    if (!requirements.botCanDelete) {
+        return "Следующий шаг: выдайте боту право «Удалять сообщения» в настройках канала — без него он не сможет убрать немаркированный пост.";
+    }
+
+    return null;
 }
 
 export interface UserChannelPermissions {

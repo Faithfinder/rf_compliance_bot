@@ -6,8 +6,11 @@ import {
     resolveChannel,
     formatChannelInfo,
     checkChannelRequirements,
-    formatChannelRequirements,
-    allRequirementsPassed,
+    formatCommonRequirements,
+    formatModerationRequirements,
+    formatNextSetupStep,
+    moderationRequirementsPassed,
+    publishRequirementsPassed,
 } from "../utils";
 import { identifyChannel } from "../config/posthog";
 import { captureEvent, type ChannelSource } from "../telemetry/events";
@@ -22,7 +25,7 @@ export function showChannelSelectionUI(errorMessage?: string): { text: string; k
         .oneTime();
 
     const baseText = [
-        "Пожалуйста, выберите канал из кнопки ниже или используйте:",
+        "Выберите канал кнопкой ниже или укажите вручную:",
         "/setchannel <@channel или ID>",
         "",
         "Пример: /setchannel @mychannel",
@@ -50,7 +53,7 @@ async function processChannelSelection(
     if (!channelInfo) {
         await bot.api.deleteMessage(chatId, workingMsg.message_id).catch(() => {});
         const errorMessage =
-            "Не удается найти или получить доступ к этому каналу. Убедитесь, что бот был добавлен в канал в качестве администратора.";
+            "Не удаётся найти этот канал или получить к нему доступ. Убедитесь, что бот добавлен в канал администратором.";
         const { text, keyboard } = showChannelSelectionUI(errorMessage);
         ctx.session.awaitingChannelSelection = true;
         await ctx.reply(text, { reply_markup: keyboard });
@@ -70,32 +73,30 @@ async function processChannelSelection(
 
     identifyChannel(channelInfo.id, channelInfo.title);
 
+    // The field set behind publishRequirementsPassed is unchanged from the former
+    // allRequirementsPassed, so this property stays comparable with historical events.
     captureEvent("channel_configured", ctx.from?.id ?? "anonymous", {
         channelId: channelInfo.id,
         channelTitle: channelInfo.title,
         source,
-        requirementsSatisfied: allRequirementsPassed(requirements),
+        requirementsSatisfied: publishRequirementsPassed(requirements),
     });
 
+    const moderationReady = moderationRequirementsPassed(requirements);
+
     const sections: Array<string | FormattedString> = [
-        "✅ Канал настроен!",
-        fmt`Ваши сообщения теперь будут публиковаться в: ${formatChannelInfo(channelInfo.id, channelInfo.title)}`,
-        fmt`📋 Требования:\n${formatChannelRequirements(requirements)}`,
+        "✅ Канал выбран!",
+        fmt`📢 ${formatChannelInfo(channelInfo.id, channelInfo.title)}`,
+        fmt`📋 ${fmt`${b}Общее:${b}`}\n${formatCommonRequirements(requirements)}`,
+        fmt`1️⃣ ${fmt`${b}Модерация канала${b}`} — ${moderationReady ? "✅ работает" : "❌ не работает"}\n${formatModerationRequirements(requirements)}`,
     ];
 
     let responseMessage = FormattedString.join(sections, "\n\n");
 
-    if (!allRequirementsPassed(requirements)) {
-        const additional: Array<string | FormattedString> = [];
-        if (!requirements.foreignAgentBlurbConfigured) {
-            additional.push(
-                fmt`${fmt`${b}Следующий шаг:${b}`} Используйте /set_fa_blurb <ваш текст> для настройки текста иностранного агента. Только администраторы канала могут настраивать параметры.`,
-            );
-        }
+    const nextStep = formatNextSetupStep(requirements);
 
-        if (additional.length > 0) {
-            responseMessage = FormattedString.join([responseMessage, FormattedString.join(additional, "\n\n")], "\n\n");
-        }
+    if (nextStep) {
+        responseMessage = FormattedString.join([responseMessage, nextStep], "\n\n");
 
         const keyboard = new Keyboard()
             .requestChat("Выбрать другой канал", 2, {
@@ -113,10 +114,12 @@ async function processChannelSelection(
             ...(entities.length ? { entities } : {}),
         });
     } else {
-        responseMessage = FormattedString.join(
-            [responseMessage, "Отправьте мне любое сообщение, чтобы проверить его."],
-            "\n\n",
-        );
+        const closing =
+            publishRequirementsPassed(requirements) ?
+                "Теперь я проверяю посты в канале. Хотите проверять до публикации — пришлите пост мне сюда, и я опубликую его сам."
+            :   "Теперь я проверяю посты в канале. Что настроено — /info.";
+
+        responseMessage = FormattedString.join([responseMessage, closing], "\n\n");
         const entities = responseMessage.entities;
         await ctx.reply(responseMessage.text, {
             reply_markup: { remove_keyboard: true },
@@ -165,7 +168,7 @@ export function registerChannelCommands(): void {
         });
 
         return ctx.reply(
-            "✅ Конфигурация канала успешно удалена.\n\nВаши сообщения больше не будут публиковаться ни в какой канал.",
+            "✅ Настройка канала удалена.\n\nПубликовать через бота больше нельзя. Модерация канала при этом продолжает работать: она привязана к каналу, а не к вам, — чтобы выключить её, уберите бота из администраторов канала.",
         );
     });
 

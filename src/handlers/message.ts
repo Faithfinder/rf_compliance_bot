@@ -5,7 +5,8 @@ import { bot } from "../config/bot";
 import {
     formatChannelInfo,
     checkChannelRequirements,
-    formatChannelRequirements,
+    formatCommonRequirements,
+    formatPublishRequirements,
     checkUserChannelPermissions,
     formatNoChannelMessage,
     formatChangeChannelHint,
@@ -52,9 +53,9 @@ export function registerMessageHandler(): void {
             });
 
             return ctx.reply(
-                "❌ У вас нет разрешения на публикацию сообщений в этот канал.\n\n" +
-                    'Только администраторы канала с разрешением "Редактировать сообщения" могут публиковать сообщения через этого бота.\n\n' +
-                    "Попросите администратора канала предоставить вам это разрешение.",
+                "❌ Вы не можете публиковать в этот канал через бота.\n\n" +
+                    "Публикация через бота требует права «Редактировать сообщения» в канале — это не то же самое, что «Публиковать сообщения», которое разрешает постить напрямую. Попросите администратора канала выдать вам его.\n\n" +
+                    "Модерация канала работает и без этого: посты, опубликованные напрямую, я всё равно проверяю.",
             );
         }
 
@@ -70,8 +71,8 @@ export function registerMessageHandler(): void {
 
             const requirements = await checkChannelRequirements(channelConfig.channelId);
 
-            let errorMessage = fmt`❌ Невозможно опубликовать сообщение: Блурб иностранного агента не настроен для ${formatChannelInfo(channelConfig.channelId, channelConfig.channelTitle)}\n\n📋 Требования:\n${formatChannelRequirements(requirements)}\n\n`;
-            errorMessage = fmt`${errorMessage}${fmt`${b}Следующий шаг:${b}`} Используйте /set_fa_blurb <ваш текст> для настройки текста иностранного агента для этого канала.\n\nТолько администраторы канала могут настраивать параметры.`;
+            let errorMessage = fmt`❌ Не могу опубликовать: для ${formatChannelInfo(channelConfig.channelId, channelConfig.channelTitle)} не задан текст маркировки.\n\nПока он не задан, модерация канала тоже ничего не проверяет — немаркированные посты остаются в канале.\n\n📋 Общее:\n${formatCommonRequirements(requirements)}\n\n`;
+            errorMessage = fmt`${errorMessage}${fmt`${b}Следующий шаг:${b}`} Задайте текст командой /set_fa_blurb <ваш текст>. Менять настройки могут только администраторы канала.`;
 
             const entities = errorMessage.entities;
             return ctx.reply(errorMessage.text, entities.length ? { entities } : undefined);
@@ -127,7 +128,7 @@ export function registerMessageHandler(): void {
                                 failureReason: classifyPublishFailure(requirements),
                             });
 
-                            let errorMessage = fmt`❌ Не удалось опубликовать альбом в ${formatChannelInfo(channelConfig.channelId, channelConfig.channelTitle)}\n\n📋 Требования:\n${formatChannelRequirements(requirements)}\n\n`;
+                            let errorMessage = fmt`❌ Не удалось опубликовать альбом в ${formatChannelInfo(channelConfig.channelId, channelConfig.channelTitle)}\n\n📋 Общее:\n${formatCommonRequirements(requirements)}\n\n2️⃣ Публикация через бота:\n${formatPublishRequirements(requirements, permissions)}\n\n`;
 
                             if (!requirements.channelExists) {
                                 errorMessage = fmt`${errorMessage}${fmt`${b}Следующий шаг:${b}`} Канал больше не существует или бот не может получить к нему доступ. Пожалуйста, выберите другой канал.`;
@@ -174,7 +175,7 @@ export function registerMessageHandler(): void {
                             notificationFailures: notifications.failedTargets,
                         });
 
-                        const errorMessage = fmt`❌ Невозможно опубликовать альбом: Ваше сообщение должно содержать текст иностранного агента.\n\n🌍 ${fmt`${b}Необходимый текст:${b}`}\n${foreignAgentBlurb}\n\nПожалуйста, добавьте этот текст к вашему сообщению и повторите попытку.\nОригинальное сообщение:`;
+                        const errorMessage = fmt`❌ Альбом не опубликован: в нём нет текста маркировки.\n\n🌍 ${fmt`${b}Эта строка должна встречаться в подписи дословно:${b}`}\n${foreignAgentBlurb}\n\nДобавьте её хотя бы к одному файлу альбома и отправьте снова. Возвращаю оригинал:`;
 
                         const entities = errorMessage.entities;
                         await ctx.api.sendMessage(
@@ -221,7 +222,7 @@ export function registerMessageHandler(): void {
                 notificationFailures: notifications.failedTargets,
             });
 
-            const errorMessage = fmt`❌ Невозможно опубликовать сообщение: Ваше сообщение должно содержать текст иностранного агента.\n\n🌍 ${fmt`${b}Необходимый текст:${b}`}\n${foreignAgentBlurb}\n\nПожалуйста, добавьте этот текст к вашему сообщению и повторите попытку.\nОригинальное сообщение:`;
+            const errorMessage = fmt`❌ Сообщение не опубликовано: в нём нет текста маркировки.\n\n🌍 ${fmt`${b}Эта строка должна встречаться в тексте дословно:${b}`}\n${foreignAgentBlurb}\n\nДобавьте её и отправьте снова. Возвращаю оригинал:`;
 
             const entities = errorMessage.entities;
             await ctx.reply(errorMessage.text, entities.length ? { entities } : undefined);
@@ -262,7 +263,7 @@ export function registerMessageHandler(): void {
                 failureReason: classifyPublishFailure(requirements),
             });
 
-            let errorMessage = fmt`❌ Не удалось опубликовать сообщение в ${formatChannelInfo(channelConfig.channelId, channelConfig.channelTitle)}\n\n📋 Требования:\n${formatChannelRequirements(requirements)}\n\n`;
+            let errorMessage = fmt`❌ Не удалось опубликовать сообщение в ${formatChannelInfo(channelConfig.channelId, channelConfig.channelTitle)}\n\n📋 Общее:\n${formatCommonRequirements(requirements)}\n\n2️⃣ Публикация через бота:\n${formatPublishRequirements(requirements, permissions)}\n\n`;
 
             if (!requirements.channelExists) {
                 errorMessage = fmt`${errorMessage}${fmt`${b}Следующий шаг:${b}`} Канал больше не существует или бот не может получить к нему доступ.`;

@@ -230,7 +230,9 @@ describe("classifyPublishFailure", () => {
         channelExists: true,
         botIsAdded: true,
         botCanPost: true,
+        botCanDelete: true,
         foreignAgentBlurbConfigured: true,
+        notificationRecipientsConfigured: true,
     };
 
     test.each([
