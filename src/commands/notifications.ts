@@ -3,6 +3,7 @@ import { Keyboard } from "grammy";
 import { bot } from "../config/bot";
 import type { SessionContext } from "../config/session";
 import { addNotificationUser, removeNotificationUser, getNotificationUsers } from "../db/database";
+import { isRecipientReachable } from "../notifications/reachability";
 import {
     checkUserChannelPermissions,
     formatChannelInfo,
@@ -91,15 +92,23 @@ async function processUserOperation(
             recipientCount: getNotificationUsers(channelId).length,
         });
 
-        const message = FormattedString.join(
-            [
-                "✅ Администратор успешно добавлен в список уведомлений!",
-                fmt`📢 ${fmt`${b}Канал:${b}`} ${formatChannelInfo(channelId, channelTitle)}`,
-                fmt`🆔 ${fmt`${b}ID пользователя:${b}`} ${fmt`${code}${String(targetUserId)}${code}`}`,
-                "Администратор будет получать уведомления, когда сообщения отклоняются из-за отсутствия текста иностранного агента.",
-            ],
-            "\n\n",
-        );
+        const lines: (string | FormattedString)[] = [
+            "✅ Администратор успешно добавлен в список уведомлений!",
+            fmt`📢 ${fmt`${b}Канал:${b}`} ${formatChannelInfo(channelId, channelTitle)}`,
+            fmt`🆔 ${fmt`${b}ID пользователя:${b}`} ${fmt`${code}${String(targetUserId)}${code}`}`,
+            "Администратор будет получать уведомления, когда сообщения отклоняются из-за отсутствия текста иностранного агента.",
+        ];
+
+        // Telegram never lets a bot write first, so a recipient who has not opened a chat with the
+        // bot silently receives nothing at all. Say it now, while the admin can still act on it -
+        // at rejection time there is nobody left to tell.
+        if (!(await isRecipientReachable(targetUserId))) {
+            lines.push(
+                "⚠️ Но пока бот не может ему писать: он еще не начал диалог с ботом. Попросите его открыть чат с ботом и нажать «Старт», иначе уведомления не будут доходить.",
+            );
+        }
+
+        const message = FormattedString.join(lines, "\n\n");
         const entities = message.entities;
         return ctx.reply(message.text, entities.length ? { entities } : undefined);
     } else {
@@ -181,23 +190,42 @@ export function registerNotificationCommands(): void {
         } else {
             message = fmt`${message}👥 ${fmt`${b}Подписчики на уведомления:${b}`}\n`;
 
+            let unreachableCount = 0;
+
             for (const targetUserId of notificationUserIds) {
+                // Recipients added before the bot started warning about this may have been silently
+                // receiving nothing for months, so the list is the one place that has to say so.
+                const reachable = await isRecipientReachable(targetUserId);
+                if (!reachable) {
+                    unreachableCount += 1;
+                }
+
+                let userLine: FormattedString;
+
                 try {
                     const chatMember = await bot.api.getChatMember(validation.channelId, targetUserId);
                     const user = chatMember.user;
-                    let userLine = fmt`• ${user.first_name}`;
+                    userLine = fmt`• ${user.first_name}`;
                     if (user.username) {
                         userLine = fmt`${userLine} (@${user.username})`;
                     }
                     userLine = fmt`${userLine} ${fmt`${code}${String(targetUserId)}${code}`}`;
-                    message = fmt`${message}${userLine}\n`;
                 } catch {
-                    const fallbackLine = fmt`• ID: ${fmt`${code}${String(targetUserId)}${code}`} (недоступен)`;
-                    message = fmt`${message}${fallbackLine}\n`;
+                    userLine = fmt`• ID: ${fmt`${code}${String(targetUserId)}${code}`} (недоступен)`;
                 }
+
+                if (!reachable) {
+                    userLine = fmt`${userLine} ⚠️`;
+                }
+
+                message = fmt`${message}${userLine}\n`;
             }
 
             message = fmt`${message}\n${fmt`${b}Всего:${b}`} ${notificationUserIds.length}`;
+
+            if (unreachableCount > 0) {
+                message = fmt`${message}\n\n⚠️ Бот не может писать администраторам с этой отметкой (${unreachableCount}) — они не начали диалог с ботом или заблокировали его, и уведомления до них не доходят. Попросите их открыть чат с ботом и нажать «Старт».`;
+            }
         }
 
         const entities = message.entities;

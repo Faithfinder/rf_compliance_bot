@@ -172,6 +172,7 @@ export function registerMessageHandler(): void {
                             albumSize: messages.length,
                             notifiedTargets: notifications.totalTargets,
                             notificationFailures: notifications.failedTargets,
+                            unreachableTargets: notifications.unreachableTargets,
                         });
 
                         const errorMessage = fmt`❌ Невозможно опубликовать альбом: Ваше сообщение должно содержать текст иностранного агента.\n\n🌍 ${fmt`${b}Необходимый текст:${b}`}\n${foreignAgentBlurb}\n\nПожалуйста, добавьте этот текст к вашему сообщению и повторите попытку.\nОригинальное сообщение:`;
@@ -219,6 +220,7 @@ export function registerMessageHandler(): void {
                 contentKind: "single",
                 notifiedTargets: notifications.totalTargets,
                 notificationFailures: notifications.failedTargets,
+                unreachableTargets: notifications.unreachableTargets,
             });
 
             const errorMessage = fmt`❌ Невозможно опубликовать сообщение: Ваше сообщение должно содержать текст иностранного агента.\n\n🌍 ${fmt`${b}Необходимый текст:${b}`}\n${foreignAgentBlurb}\n\nПожалуйста, добавьте этот текст к вашему сообщению и повторите попытку.\nОригинальное сообщение:`;
@@ -382,6 +384,7 @@ export function registerMessageHandler(): void {
                             albumSize: messages.length,
                             notifiedTargets: notifications.totalTargets,
                             notificationFailures: notifications.failedTargets,
+                            unreachableTargets: notifications.unreachableTargets,
                             authorKnown: typeof actor?.id === "number",
                         });
                     } catch (error) {
@@ -438,6 +441,7 @@ export function registerMessageHandler(): void {
                 contentKind: "single",
                 notifiedTargets: notifications.totalTargets,
                 notificationFailures: notifications.failedTargets,
+                unreachableTargets: notifications.unreachableTargets,
                 authorKnown: typeof actor?.id === "number",
             });
         } catch (error) {

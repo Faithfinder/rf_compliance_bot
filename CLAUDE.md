@@ -26,6 +26,23 @@ Centralized in [src/handlers/message-helpers.ts](src/handlers/message-helpers.ts
 - Compliant rich messages are published with `copyMessage`, which keeps their formatting intact.
 - `resolveUserIdentifier()` only accepts numeric user IDs — username lookups are not supported by the Telegram Bot API.
 
+## Notification Delivery
+
+A bot cannot open a private chat with a user, so a notification recipient who never pressed Start —
+which includes most channel post authors, since posting requires no contact with the bot — simply
+cannot be written to. Telegram answers `400: chat not found` (or a 403 for blocks and dead accounts).
+
+- [src/notifications/reachability.ts](src/notifications/reachability.ts) is the single place that
+  recognizes those wordings. `dispatchRejectionNotifications` counts them as `unreachableTargets` and
+  **does not report them to Sentry** — they are a permanent property of the recipient, not a fault,
+  and reporting them buries real delivery faults. `failedTargets` stays reserved for actual errors.
+- Because that signal is now silent, `/notify_add` probes reachability with `sendChatAction` (the
+  cheapest call that fails the same way and shows the recipient nothing but a typing indicator) and
+  warns the admin at configuration time, which is the only moment anyone can act on it.
+- `/notify_list` probes every recipient for the same reason: an add-time warning does nothing for
+  entries that predate it. Its `⚠️` marker means "the bot cannot write to this person" and is
+  distinct from the older `(недоступен)`, which only means `getChatMember` failed for them.
+
 ## Telemetry
 
 PostHog product analytics, alongside Sentry. The `add-telemetry-event` skill has the procedure and the

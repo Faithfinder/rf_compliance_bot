@@ -151,6 +151,7 @@ describe("Telemetry capture", () => {
             contentKind: "single",
             notifiedTargets: 2,
             notificationFailures: 0,
+            unreachableTargets: 0,
         });
 
         expect(payloads[0]?.groups).toEqual({ channel: CHANNEL_ID });
