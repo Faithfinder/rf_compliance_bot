@@ -58,7 +58,7 @@ export function registerInfoCommand(): void {
             if (publishRequirementsPassed(requirements) && userPermissions?.canEditMessages) {
                 publishSection = fmt`${publishSection}\n\n💡 Чтобы через бота шло всё, снимите право «Публиковать сообщения» у администраторов-людей: тогда единственным путём в канал останется проверка до публикации.`;
             } else {
-                publishSection = fmt`${publishSection}\n\nМодерация удаляет пост уже после публикации; публикация через бота не даёт ему выйти вовсе — в том числе когда бот недоступен.`;
+                publishSection = fmt`${publishSection}\n\nРазмен: писать боту в личные сообщения менее удобно, зато пост проверяется до выхода — в том числе когда бот недоступен. Модерация в этом случае просто оставит немаркированный пост в канале.`;
             }
 
             sections.push(publishSection);
